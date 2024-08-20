@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="ExifLib" Version="1.7.0" />
+      <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.10.0" />
+    </ItemGroup>
+
+</Project>
