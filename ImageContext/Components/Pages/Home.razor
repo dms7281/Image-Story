@@ -1,7 +1,12 @@
 ﻿@page "/"
+@using System.Data
 @using ExifLib
-@using ImageMagick
+@using ImageContext.Components.Services
+
+@inject IConfiguration Configuration
+
 @rendermode InteractiveServer
+
 
 <PageTitle>Home</PageTitle>
 
@@ -12,11 +17,10 @@
 <div></div>
 
 @code {
-    
+    private readonly HttpClient _httpClient = new HttpClient();
     
     private string _resultMessage = "Waiting for file upload...";
     private const string SuccessMessage = "Image uploaded successfully";
-    private const string NullFileMessage = "Error: No file uploaded";
     private const string InvalidFileMessage = "Error: Invalid file type";
 
     private async Task FileUploaded(InputFileChangeEventArgs e)
@@ -27,84 +31,39 @@
             _resultMessage = InvalidFileMessage;
             return;
         }
-        
-        var imageFile = e.File;
-        
-        Console.WriteLine($"File name: {imageFile.Name}");
-        Console.WriteLine($"File size: {imageFile.Size}");
-        Console.WriteLine($"Content type: {imageFile.ContentType}");
 
-        try // Clean up this code
+        try
         {
-            
+            var imageMetadata = await new ExifExtractService().ExtractExifData(e.File);
             _resultMessage = SuccessMessage;
             
-            // Read the file into a memory stream
-            using var originalStream = new MemoryStream();
-            await imageFile.OpenReadStream(maxAllowedSize: 1024 * 5000).CopyToAsync(originalStream);
+            Console.WriteLine(imageMetadata.DateTaken);
 
-            originalStream.Position = 0;
-
-            // Stream to use for metadata extraction (may be original or converted)
-            Stream processingStream = originalStream;
-
-            // Check and handle HEIC file conversion to JPEG
-            if (imageFile.ContentType == "image/heif")
+            if (imageMetadata.Coordinates != null)
             {
-                // Convert HEIC to JPEG
-                var convertedStream = new MemoryStream();
-                await ConvertHeicToJpgAsync(originalStream, convertedStream);
-                convertedStream.Position = 0;
-
-                // Use the converted JPEG stream for metadata extraction
-                processingStream = convertedStream;
+                var location = await new GeocodingService(Configuration, _httpClient).GetLocationData(imageMetadata.Coordinates);
+                _resultMessage = location.Item1;
+                Console.WriteLine(location.Item1);
+                foreach (string s in location.Item2)
+                {
+                    Console.WriteLine(s);
+                }
             }
-
-            using var reader = new ExifReader(processingStream);
-
-            if (reader.GetTagValue(ExifTags.DateTimeOriginal, out DateTime dateTaken))
+            else
             {
-                Console.WriteLine($"Date Taken: {dateTaken}");
+                Console.WriteLine("No Location Data Available");
             }
-
-            if (reader.GetTagValue(ExifTags.GPSLatitude, out double[] latitude) &&
-                reader.GetTagValue(ExifTags.GPSLongitude, out double[] longitude) &&
-                reader.GetTagValue(ExifTags.GPSLatitudeRef, out string latRef) &&
-                reader.GetTagValue(ExifTags.GPSLongitudeRef, out string lonRef))
-            {
-                var lat = ConvertGpsToDecimal(latitude, latRef);
-                var lon = ConvertGpsToDecimal(longitude, lonRef);
-                Console.WriteLine($"Location: Latitude {lat}, Longitude {lon}");
-            }
+        }
+        catch (ExifLibException ex)
+        {
+            _resultMessage = $"Error: {ex.Message}";
         }
         catch (Exception ex)
         {
             _resultMessage = $"Error: {ex.Message}";
         }
-    }
-    
-    private async Task ConvertHeicToJpgAsync(Stream heicStream, Stream outputStream)
-    {
-        using var image = new MagickImage(heicStream);
-        image.Format = MagickFormat.Jpg;
-        await image.WriteAsync(outputStream);
-    }
-    
-    private static double ConvertGpsToDecimal(double[] coordinate, string hemisphere)
-    {
-        double degrees = coordinate[0];
-        double minutes = coordinate[1];
-        double seconds = coordinate[2];
-
-        double decimalCoordinate = degrees + (minutes / 60) + (seconds / 3600);
-
-        // Adjust for hemisphere (N, S, E, W)
-        if (hemisphere == "S" || hemisphere == "W")
-        {
-            decimalCoordinate *= -1;
-        }
-
-        return decimalCoordinate;
+        
+        
     }
 
 }
