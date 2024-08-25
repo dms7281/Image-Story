@@ -17,7 +17,7 @@
 <p>Date Taken: @_dateTaken</p>
 <p>Coordinates: @_coordinates</p>
 <p>Approximate Address: @_address</p>
-<p>List of places: @_places</p>
+<p>Simplified Address: @_places</p>
 <p>History: @_historyOfAddress</p>
 <img src="@imageSource" alt="{@_address} on {@_dateTaken}" />
 
@@ -56,7 +56,7 @@
         {
             // Read the file into a memory stream
             using var stream = new MemoryStream();
-            await e.File.OpenReadStream(maxAllowedSize: 1024 * 5000).CopyToAsync(stream);
+            await e.File.OpenReadStream(maxAllowedSize: 1024 * 6000).CopyToAsync(stream);
             stream.Position = 0;
             using var image = new MagickImage(stream);
             image.Resize(512,512);
@@ -91,22 +91,21 @@
 
             if (imageMetadata.Coordinates != null)
             {
-                string? places = null;
+                // string? places = null;
                 _coordinates = imageMetadata.Coordinates.ToString();
                 var locationData = await new GeocodingService(Configuration, _httpClient).GetLocationData(imageMetadata.Coordinates);
-                foreach (string place in locationData.Item1)
-                {
-                    Console.WriteLine(place);
-                    places += (" " + place); 
-                }
+                // foreach (string place in locationData.Item1)
+                // {
+                //     Console.WriteLine(place);
+                //     places += (" " + place); 
+                // }
                 
                 _address = locationData.Item2;
-                _places = places;
+                // _places = places;
 
                 var openAIService = new OpenAIService(Configuration);
-                places = await openAIService.AddressCorrection(places, imageBytes);
-                _places = places;
-                _historyOfAddress = await openAIService.HistoryOfAddress(places);
+                _places = await openAIService.AddressCorrection(locationData.Item1, imageBytes);
+                _historyOfAddress = await openAIService.HistoryOfAddress(_places);
             }
             else
             {

@@ -10,21 +10,26 @@ public class OpenAIService(IConfiguration config)
 {
     private OpenAIAPI _api = new(config["OpenAIKey"]);
     
-    public async Task<string?> AddressCorrection(string? originalAddress, byte[] imageBytes)
+    public async Task<string?> AddressCorrection(List<string?> originalAddresses, byte[] imageBytes)
     {
+        string addressToInput = "";
+        foreach (string s in originalAddresses)
+        {
+            addressToInput += " " + s;
+        }
         Console.WriteLine("Open AI Address Correction Started");
+        Console.WriteLine(addressToInput);
         
         // Take original address and correct it based on the image
         var chat = _api.Chat.CreateConversation();
         chat.RequestParameters.Model = "gpt-4o-mini";
         //chat.RequestParameters.Temperature = 0;
         chat.RequestParameters.TopP = 0.01;
-        chat.AppendSystemMessage("You will be given an image of a location and the name of a place with an address. " +
-                                 "If the name of the place does not match the image, please fix the name of the place and the address. " +
-                                 "Output only the name in the form: place name, the rest of address. " +
-                                 "If the name of the place DOES match the image, return the same address");
+        chat.AppendSystemMessage("You will be given an image of a location and a list of address that are near this photo or are in the photo. " +
+                                 "Consider all of these addresses and the image to determine the most accurate address." +
+                                 "Output only the correct address.");
         
-        chat.AppendUserInput(originalAddress, ChatMessage.ImageInput.FromImageBytes(imageBytes, detail:"low"));
+        chat.AppendUserInput(addressToInput, ChatMessage.ImageInput.FromImageBytes(imageBytes, detail:"low"));
         var response = await chat.GetResponseFromChatbotAsync();
         chat.Messages.Clear();
         return response;

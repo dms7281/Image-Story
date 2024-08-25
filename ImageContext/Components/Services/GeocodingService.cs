@@ -17,29 +17,30 @@ public class GeocodingService(IConfiguration config, HttpClient httpClient)
         {
             Console.WriteLine("Google Geocoding API Request: Successful");
             var jsonString = await request.Content.ReadAsStringAsync();
+            //Console.WriteLine(jsonString);
             var json = JsonSerializer.Deserialize<GeocodingJson>(jsonString);
             
             var compoundCode = json?.PlusCodes?.CompoundCode;
 
             //var addressList = new List<string?>();
 
-            List<string> places = new List<string>();
+            List<string> addresses = new List<string>();
 
             foreach (Result result in json.Results)
             {
-                var place = await new PlacesService(config, httpClient).GetExplicitPlace(result.PlaceId);
-                if(place != null) places.Add(place);
+                addresses.Add(result.FormattedAddress);
+                //var place = await new PlacesService(config, httpClient).GetExplicitPlace(result.PlaceId);
+                //if(place != null) places.Add(place);
             }
 
-            if (places.Count > 0)
-            {
-                return (places, compoundCode);
-            }
-            
-            return (places, compoundCode);
-            
+            // if (places.Count > 0)
+            // {
+            //     return (places, compoundCode);
+            // }
             
             Console.WriteLine("Google Geocoding API Response: Successful");
+            
+            return (addresses, compoundCode);
             
             //var firstAddress = await new PlacesService(config, httpClient).GetPlace(json.Results[0].PlaceId);
         }
