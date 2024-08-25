@@ -2,8 +2,6 @@ using ImageContext.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
-var GoogleGeocodingAPIKey = builder.Configuration["GeocodingService:GoogleGeocodingApiKey"];
-Console.WriteLine(GoogleGeocodingAPIKey);
 
 // Add services to the container.
 builder.Services

@@ -6,36 +6,38 @@ namespace ImageContext.Components.Services;
 
 public class ExifExtractService
 {
-    public async Task<ImageMetadata?> ExtractExifData(IBrowserFile? imageFile)
+    public async Task<ImageMetadata?> ExtractExifData(MemoryStream stream)
     {
         ImageMetadata? imageMetadata = new ImageMetadata();
         
         // Read the file into a memory stream
-        using var originalStream = new MemoryStream();
-        await imageFile.OpenReadStream(maxAllowedSize: 1024 * 5000).CopyToAsync(originalStream);
-        
-        Console.WriteLine("Read file into memory stream");
-
-        originalStream.Position = 0;
+        //using var originalStream = new MemoryStream();
+        // await imageFile.OpenReadStream(maxAllowedSize: 1024 * 5000).CopyToAsync(originalStream);
+        //
+        // Console.WriteLine("Read file into memory stream");
+        //
+        // originalStream.Position = 0;
 
         // Stream to use for metadata extraction (may be original or converted)
-        Stream processingStream = originalStream;
-
-        // Check and handle HEIC file conversion to JPEG
-        if (imageFile.ContentType == "image/heif")
-        {
-            // Convert HEIC to JPEG
-            var convertedStream = new MemoryStream();
-            await ConvertHeicToJpgAsync(originalStream, convertedStream);
-            convertedStream.Position = 0;
-
-            // Use the converted JPEG stream for metadata extraction
-            processingStream = convertedStream;
-        }
+        // Stream processingStream = originalStream;
+        //
+        // // Check and handle HEIC file conversion to JPEG
+        // if (e.file.ContentType == "image/heif")
+        // {
+        //     // Convert HEIC to JPEG
+        //     var convertedStream = new MemoryStream();
+        //     await ConvertHeicToJpgAsync(originalStream, convertedStream);
+        //     convertedStream.Position = 0;
+        //
+        //     // Use the converted JPEG stream for metadata extraction
+        //     processingStream = convertedStream;
+        // }
         
         Console.WriteLine("Preparing to read exif data");
+
+        stream.Position = 0;
         
-        using var reader = new ExifReader(processingStream);
+        using var reader = new ExifReader(stream);
         
         Console.WriteLine("Reading exif data");
 
@@ -77,13 +79,6 @@ public class ExifExtractService
         }
 
         return decimalCoordinate;
-    }
-    
-    private async Task ConvertHeicToJpgAsync(Stream heicStream, Stream outputStream)
-    {
-        using var image = new MagickImage(heicStream);
-        image.Format = MagickFormat.Jpg;
-        await image.WriteAsync(outputStream);
     }
     
     public class ImageMetadata

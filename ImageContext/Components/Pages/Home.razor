@@ -2,6 +2,7 @@
 @using System.Data
 @using ExifLib
 @using ImageContext.Components.Services
+@using ImageMagick
 
 @inject IConfiguration Configuration
 
@@ -13,15 +14,34 @@
 <div>Select your file:</div>
 <InputFile OnChange="FileUploaded" accept="image/*" />
 <p role="status">Message: @_resultMessage</p>
-
-<div></div>
+<p>Date Taken: @_dateTaken</p>
+<p>Coordinates: @_coordinates</p>
+<p>Approximate Address: @_address</p>
+<p>List of places: @_places</p>
+<p>History: @_historyOfAddress</p>
+<img src="@imageSource" alt="{@_address} on {@_dateTaken}" />
 
 @code {
     private readonly HttpClient _httpClient = new HttpClient();
     
+    // Example byte array for demonstration
+    private byte[] imageBytes;
+
+    private string imageBase64Data;
+    private string imageMimeType = "image/jpeg"; // Adjust based on the image type
+    private string imageSource;
+
+    ExifExtractService.ImageMetadata imageMetadata;
+    private string _dateTaken;
+    private string _coordinates;
+    private string _places;
+    private string _address;
+    private string _historyOfAddress;
+    
     private string _resultMessage = "Waiting for file upload...";
     private const string SuccessMessage = "Image uploaded successfully";
     private const string InvalidFileMessage = "Error: Invalid file type";
+    private const string NullMetadataMessage = "Error: Metadata not available";
 
     private async Task FileUploaded(InputFileChangeEventArgs e)
     {
@@ -34,24 +54,65 @@
 
         try
         {
-            var imageMetadata = await new ExifExtractService().ExtractExifData(e.File);
-            _resultMessage = SuccessMessage;
+            // Read the file into a memory stream
+            using var stream = new MemoryStream();
+            await e.File.OpenReadStream(maxAllowedSize: 1024 * 5000).CopyToAsync(stream);
+            stream.Position = 0;
+            using var image = new MagickImage(stream);
+            image.Resize(512,512);
+            imageBytes = image.ToByteArray();
+            imageBase64Data = Convert.ToBase64String(imageBytes);
+            imageSource = $"data:image/jpeg;base64,{imageBase64Data}";
+            Console.WriteLine("Read file into memory stream");
+            stream.Position = 0;
             
-            Console.WriteLine(imageMetadata.DateTaken);
-
-            if (imageMetadata.Coordinates != null)
+            if (e.File.ContentType == "image/heif")
             {
-                var location = await new GeocodingService(Configuration, _httpClient).GetLocationData(imageMetadata.Coordinates);
-                _resultMessage = location.Item1;
-                Console.WriteLine(location.Item1);
-                foreach (string s in location.Item2)
-                {
-                    Console.WriteLine(s);
-                }
+                // Convert image to Jpg, flush stream, rewrite image to stream
+                image.Format = MagickFormat.Jpg;
+                await stream.FlushAsync();
+                await image.WriteAsync(stream);
+                stream.Position = 0;
+            }
+            
+            // Extract EXIF data from stream
+            imageMetadata = await new ExifExtractService().ExtractExifData(stream);
+            
+            _resultMessage = SuccessMessage;
+
+            if (imageMetadata.DateTaken != null)
+            {
+                _dateTaken = imageMetadata.DateTaken.ToString();
             }
             else
             {
-                Console.WriteLine("No Location Data Available");
+                _dateTaken = NullMetadataMessage;
+            }
+
+            if (imageMetadata.Coordinates != null)
+            {
+                string? places = null;
+                _coordinates = imageMetadata.Coordinates.ToString();
+                var locationData = await new GeocodingService(Configuration, _httpClient).GetLocationData(imageMetadata.Coordinates);
+                foreach (string place in locationData.Item1)
+                {
+                    Console.WriteLine(place);
+                    places += (" " + place); 
+                }
+                
+                _address = locationData.Item2;
+                _places = places;
+
+                var openAIService = new OpenAIService(Configuration);
+                places = await openAIService.AddressCorrection(places, imageBytes);
+                _places = places;
+                _historyOfAddress = await openAIService.HistoryOfAddress(places);
+            }
+            else
+            {
+                _coordinates = NullMetadataMessage;
+                _places = NullMetadataMessage;
+                _address = NullMetadataMessage;
             }
         }
         catch (ExifLibException ex)
@@ -65,5 +126,16 @@
         
         
     }
+    
+    // protected override void OnInitialized()
+    // {
+    //     // Convert the byte array to a Base64 string
+    //     imageBase64Data = Convert.ToBase64String(imageBytes);
+    // }
+    //
+    // private string GetImageSrc()
+    // {
+    //     return $"data:{imageMimeType};base64,{imageBase64Data}";
+    // }
 
 }
