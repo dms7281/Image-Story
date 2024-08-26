@@ -17,8 +17,6 @@ public class OpenAIService(IConfiguration config)
         {
             addressToInput += " " + s;
         }
-        Console.WriteLine("Open AI Address Correction Started");
-        Console.WriteLine(addressToInput);
         
         // Take original address and correct it based on the image
         var chat = _api.Chat.CreateConversation();
@@ -32,12 +30,14 @@ public class OpenAIService(IConfiguration config)
         chat.AppendUserInput(addressToInput, ChatMessage.ImageInput.FromImageBytes(imageBytes, detail:"low"));
         var response = await chat.GetResponseFromChatbotAsync();
         chat.Messages.Clear();
+        
+        Console.WriteLine("Open AI API: Address Correction Successful");
+        
         return response;
     }
     
     public async Task<string?> HistoryOfAddress(string? address)
     {
-        Console.WriteLine("Open AI History of Address Started");
         // Take address and generate 1000 character string about history of place and address
         var chat = _api.Chat.CreateConversation();
         chat.RequestParameters.Model = "gpt-4o-mini";
@@ -49,6 +49,9 @@ public class OpenAIService(IConfiguration config)
         chat.AppendUserInput(address);
         var response = await chat.GetResponseFromChatbotAsync();
         chat.Messages.Clear();
+        
+        Console.WriteLine("Open AI API: History of Address Successful");
+        
         return response;
     }
 }

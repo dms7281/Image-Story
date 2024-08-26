@@ -1,78 +1,83 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using JsonException = System.Text.Json.JsonException;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace ImageContext.Components.Services;
 
-public class GeocodingService(IConfiguration config, HttpClient httpClient)
+public class GeocodingService
 {
-    private readonly string? _googleGeocodingApiKey = config["GoogleServicesKey"];
-
-    public async Task<(List<string>, string)> GetLocationData((double, double)? coordinates)
+    private async Task<HashSet<string?>> GetSearchTerms(string jsonRequestString)
     {
+        HashSet<string> searchTerms = new HashSet<string>();
+        using (JsonDocument doc = JsonDocument.Parse(jsonRequestString))
+        {
+            // Get the root element
+            JsonElement root = doc.RootElement;
+
+            JsonElement results = root.GetProperty("results");
+
+            // Iterate through each result in the array
+            foreach (JsonElement result in results.EnumerateArray())
+            {
+                JsonElement addressComponents = result.GetProperty("address_components");
+                foreach (JsonElement addressComponent in addressComponents.EnumerateArray())
+                {
+                    JsonElement types = addressComponent.GetProperty("types");
+
+                    foreach (var type in addressComponent.GetProperty("types").EnumerateArray())
+                    {
+                        if (!type.ToString().Contains("street_number") &&
+                            !type.ToString().Contains("intersection") && !type.ToString().Contains("plus_code") &&
+                            !type.ToString().Contains("postal_code_suffix"))
+                        {
+                            searchTerms.Add(addressComponent.GetProperty("long_name").ToString());
+                        }
+                    }
+                }
+            }
+            Console.WriteLine("Google Geocoding API: Returned Search Terms");
+            
+            return searchTerms;
+        }
+    }
+
+    private async Task<List<string?>> GetFormatedAddresses(string jsonRequestString)
+    {
+        List<string?> formatedAddresses = new List<string?>();
+        using (JsonDocument doc = JsonDocument.Parse(jsonRequestString))
+        {
+            JsonElement root = doc.RootElement;
+            JsonElement results = root.GetProperty("results");
+            foreach (JsonElement result in results.EnumerateArray())
+            {
+                JsonElement formatedAddress = result.GetProperty("formatted_address");
+                formatedAddresses.Add(formatedAddress.ToString());
+            }
+            Console.WriteLine("Google Geocoding API: Returned Formatted Addresses");
+            
+            return formatedAddresses;
+        }
+    }
+    
+    public async Task<(HashSet<string?>, List<string?>)> RequestGeocodingApi (IConfiguration config, HttpClient httpClient, (double, double)? coordinates)
+    {
+        var key = config["GoogleServicesKey"];
         var request = await httpClient.GetAsync(
-            $"https://maps.googleapis.com/maps/api/geocode/json?latlng={coordinates.Value.Item1},{coordinates.Value.Item2}&key={_googleGeocodingApiKey}");
+            $"https://maps.googleapis.com/maps/api/geocode/json?latlng={coordinates.Value.Item1},{coordinates.Value.Item2}&key={key}");
 
         if (request.IsSuccessStatusCode)
         {
-            Console.WriteLine("Google Geocoding API Request: Successful");
-            var jsonString = await request.Content.ReadAsStringAsync();
-            //Console.WriteLine(jsonString);
-            var json = JsonSerializer.Deserialize<GeocodingJson>(jsonString);
+            var requestJsonString = await request.Content.ReadAsStringAsync();
+            var searchTerms = await GetSearchTerms(requestJsonString);
+            var formatedAddresses = await GetFormatedAddresses(requestJsonString);
             
-            var compoundCode = json?.PlusCodes?.CompoundCode;
+            Console.WriteLine("Google Geocoding API: Request Successful");
 
-            //var addressList = new List<string?>();
-
-            List<string> addresses = new List<string>();
-
-            foreach (Result result in json.Results)
-            {
-                addresses.Add(result.FormattedAddress);
-                //var place = await new PlacesService(config, httpClient).GetExplicitPlace(result.PlaceId);
-                //if(place != null) places.Add(place);
-            }
-
-            // if (places.Count > 0)
-            // {
-            //     return (places, compoundCode);
-            // }
-            
-            Console.WriteLine("Google Geocoding API Response: Successful");
-            
-            return (addresses, compoundCode);
-            
-            //var firstAddress = await new PlacesService(config, httpClient).GetPlace(json.Results[0].PlaceId);
+            return (searchTerms, formatedAddresses);
         }
-        throw new Exception("Google Geocoding API Request Failure");
-    }
-    
-    private class GeocodingJson
-    { 
-        [JsonPropertyName("plus_code")]
-        public PlusCode? PlusCodes { get; set; }
-    
-        [JsonPropertyName("results")]
-        public List<Result>? Results { get; set; }
-    }
-
-    private class PlusCode
-    {
-        [JsonPropertyName("compound_code")]
-        public string? CompoundCode { get; set; }
-    
-        // [JsonPropertyName("global_code")]
-        // public string? GlobalCode { get; set; }
-    }
-    private class Result
-    {
-        [JsonPropertyName("formatted_address")]
-        public string? FormattedAddress { get; set; }
-    
-        [JsonPropertyName("place_id")]
-        public string? PlaceId { get; set; }
-    
-        [JsonPropertyName("types")]
-        public List<string?>? Types { get; set; }
+        throw new Exception("Google Geocoding API: Request Failure");
     }
 }
+
+    

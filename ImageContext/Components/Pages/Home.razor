@@ -16,8 +16,8 @@
 <p role="status">Message: @_resultMessage</p>
 <p>Date Taken: @_dateTaken</p>
 <p>Coordinates: @_coordinates</p>
-<p>Approximate Address: @_address</p>
-<p>Simplified Address: @_places</p>
+<p>Simplified Address: @_address</p>
+<p>Search Terms: @_searchTerms</p>
 <p>History: @_historyOfAddress</p>
 <img src="@imageSource" alt="{@_address} on {@_dateTaken}" />
 
@@ -36,6 +36,7 @@
     private string _coordinates;
     private string _places;
     private string _address;
+    private string _searchTerms;
     private string _historyOfAddress;
     
     private string _resultMessage = "Waiting for file upload...";
@@ -58,14 +59,9 @@
             using var stream = new MemoryStream();
             await e.File.OpenReadStream(maxAllowedSize: 1024 * 6000).CopyToAsync(stream);
             stream.Position = 0;
-            using var image = new MagickImage(stream);
-            image.Resize(512,512);
-            imageBytes = image.ToByteArray();
-            imageBase64Data = Convert.ToBase64String(imageBytes);
-            imageSource = $"data:image/jpeg;base64,{imageBase64Data}";
             Console.WriteLine("Read file into memory stream");
-            stream.Position = 0;
             
+            using var image = new MagickImage(stream);
             if (e.File.ContentType == "image/heif")
             {
                 // Convert image to Jpg, flush stream, rewrite image to stream
@@ -74,6 +70,11 @@
                 await image.WriteAsync(stream);
                 stream.Position = 0;
             }
+            image.Resize(512,512);
+            imageBytes = image.ToByteArray();
+            imageBase64Data = Convert.ToBase64String(imageBytes);
+            imageSource = $"data:image/jpeg;base64,{imageBase64Data}";
+            stream.Position = 0;
             
             // Extract EXIF data from stream
             imageMetadata = await new ExifExtractService().ExtractExifData(stream);
@@ -93,19 +94,20 @@
             {
                 // string? places = null;
                 _coordinates = imageMetadata.Coordinates.ToString();
-                var locationData = await new GeocodingService(Configuration, _httpClient).GetLocationData(imageMetadata.Coordinates);
-                // foreach (string place in locationData.Item1)
-                // {
-                //     Console.WriteLine(place);
-                //     places += (" " + place); 
-                // }
-                
-                _address = locationData.Item2;
-                // _places = places;
+                var geocodingData = await new GeocodingService().RequestGeocodingApi(Configuration, _httpClient, imageMetadata.Coordinates);
+                var searchTerms = geocodingData.Item1;
+                var formatedAddresses = geocodingData.Item2;
+
+                _searchTerms = "";
+
+                foreach (var searchTerm in searchTerms)
+                {
+                    _searchTerms += " " + searchTerm;
+                }
 
                 var openAIService = new OpenAIService(Configuration);
-                _places = await openAIService.AddressCorrection(locationData.Item1, imageBytes);
-                _historyOfAddress = await openAIService.HistoryOfAddress(_places);
+                _address = await openAIService.AddressCorrection(formatedAddresses, imageBytes);
+                _historyOfAddress = await openAIService.HistoryOfAddress(_address);
             }
             else
             {
