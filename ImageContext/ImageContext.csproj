@@ -9,7 +9,10 @@
 
     <ItemGroup>
       <PackageReference Include="ExifLib" Version="1.7.0" />
+      <PackageReference Include="Json.Net" Version="1.0.33" />
       <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="13.10.0" />
+      <PackageReference Include="Microsoft.Azure.CognitiveServices.Search.NewsSearch" Version="2.0.0" />
+      <PackageReference Include="Microsoft.Bing.Search.NewsSearch" Version="1.0.0" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
       <PackageReference Include="OpenAI" Version="1.11.0" />
     </ItemGroup>

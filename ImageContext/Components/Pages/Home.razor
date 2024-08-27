@@ -21,6 +21,8 @@
 <p>History: @_historyOfAddress</p>
 <img src="@imageSource" alt="{@_address} on {@_dateTaken}" />
 
+<a href="@_twitterResultsUrl">Twitter Feed</a>
+
 @code {
     private readonly HttpClient _httpClient = new HttpClient();
     
@@ -38,6 +40,7 @@
     private string _address;
     private string _searchTerms;
     private string _historyOfAddress;
+    private string _twitterResultsUrl = "";
     
     private string _resultMessage = "Waiting for file upload...";
     private const string SuccessMessage = "Image uploaded successfully";
@@ -105,9 +108,31 @@
                     _searchTerms += " " + searchTerm;
                 }
 
+                var year = imageMetadata.DateTaken.Year;
+                var month = imageMetadata.DateTaken.Month;
+                var day = imageMetadata.DateTaken.Day;
+
+                _twitterResultsUrl = $"https://twitter.com/search?q=+geocode%3A{imageMetadata.Coordinates.Value.Item1}%2C{imageMetadata.Coordinates.Value.Item2}%2C2mi+since%3A{year}-{month}-{day-1}+until%3A{year}-{month}-{day+1}&src=typed_query";
+
+
                 var openAIService = new OpenAIService(Configuration);
                 _address = await openAIService.AddressCorrection(formatedAddresses, imageBytes);
                 _historyOfAddress = await openAIService.HistoryOfAddress(_address);
+
+                foreach (var term in searchTerms)
+                {
+                    Console.WriteLine(term);
+                }
+                
+                var newsStories = await new NewsService(Configuration, _httpClient).GetNews(imageMetadata.DateTaken, searchTerms);
+
+                foreach (var article in newsStories)
+                {
+                    Console.WriteLine(article.title);
+                    Console.WriteLine(article.description);
+                    Console.WriteLine(article.provider);
+                    Console.WriteLine(article.url);
+                }
             }
             else
             {
@@ -127,16 +152,4 @@
         
         
     }
-    
-    // protected override void OnInitialized()
-    // {
-    //     // Convert the byte array to a Base64 string
-    //     imageBase64Data = Convert.ToBase64String(imageBytes);
-    // }
-    //
-    // private string GetImageSrc()
-    // {
-    //     return $"data:{imageMimeType};base64,{imageBase64Data}";
-    // }
-
 }

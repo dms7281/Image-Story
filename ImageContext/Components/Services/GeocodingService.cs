@@ -7,35 +7,44 @@ namespace ImageContext.Components.Services;
 
 public class GeocodingService
 {
-    private async Task<HashSet<string?>> GetSearchTerms(string jsonRequestString)
+    private async Task<List<string?>> GetSearchTerms(string jsonRequestString)
     {
-        HashSet<string> searchTerms = new HashSet<string>();
+        List<string> searchTerms = new List<string>();
+        List<string> excludedTypes = new List<string>{"street_number", "route", "intersection", "plus_code", "postal_code", "postal_code_suffix", "country"};
+        string concatenatedTerms = string.Empty;
         using (JsonDocument doc = JsonDocument.Parse(jsonRequestString))
         {
             // Get the root element
             JsonElement root = doc.RootElement;
 
             JsonElement results = root.GetProperty("results");
+            
+            JsonElement addressComponents = results[0].GetProperty("address_components");
 
-            // Iterate through each result in the array
-            foreach (JsonElement result in results.EnumerateArray())
+            var addressCompArray = addressComponents.EnumerateArray().ToArray();
+            
+            for (int i = addressCompArray.Length - 1; i >= 0; i--)
             {
-                JsonElement addressComponents = result.GetProperty("address_components");
-                foreach (JsonElement addressComponent in addressComponents.EnumerateArray())
+                JsonElement types = addressComponents[i].GetProperty("types");
+            
+                foreach (var type in types.EnumerateArray())
                 {
-                    JsonElement types = addressComponent.GetProperty("types");
-
-                    foreach (var type in addressComponent.GetProperty("types").EnumerateArray())
-                    {
-                        if (!type.ToString().Contains("street_number") &&
-                            !type.ToString().Contains("intersection") && !type.ToString().Contains("plus_code") &&
-                            !type.ToString().Contains("postal_code_suffix"))
-                        {
-                            searchTerms.Add(addressComponent.GetProperty("long_name").ToString());
-                        }
-                    }
+                    // Code currently excludes routes, work on implementing them with cities in the future
+                    if (excludedTypes.Contains(type.ToString())) break;
+                    
+                    var addressComp = addressComponents[i].GetProperty("long_name").ToString();
+            
+                    if (concatenatedTerms.Contains(addressComp)) break;
+                    
+                    concatenatedTerms = string.IsNullOrEmpty(concatenatedTerms) 
+                        ? $"\"{addressComp}\"" 
+                        : $"\"{addressComp}\" {concatenatedTerms}";
+        
+                    // Add the new concatenated string to the search terms list
+                    searchTerms.Insert(0, concatenatedTerms);
                 }
             }
+            
             Console.WriteLine("Google Geocoding API: Returned Search Terms");
             
             return searchTerms;
@@ -60,7 +69,7 @@ public class GeocodingService
         }
     }
     
-    public async Task<(HashSet<string?>, List<string?>)> RequestGeocodingApi (IConfiguration config, HttpClient httpClient, (double, double)? coordinates)
+    public async Task<(List<string?>, List<string?>)> RequestGeocodingApi (IConfiguration config, HttpClient httpClient, (double, double)? coordinates)
     {
         var key = config["GoogleServicesKey"];
         var request = await httpClient.GetAsync(

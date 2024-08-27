@@ -1,72 +1,58 @@
-using System.Text.Json;
+using System;
+using System.Linq;
+using Microsoft.Bing.NewsSearch;
 
 namespace ImageContext.Components.Services;
 
 public class NewsService(IConfiguration config, HttpClient httpClient)
 {
-    private readonly string? newsApiKey = config["NewsKey"];
+    private readonly string? _bingApiKey = config["BingKey"];
     
-    // public async Task<List<NewsArticle?>> GetNews(DateTime dateTaken, string address)
-    // {
-    //     List<string> searchTerms = AddressToSearchTerms(address);
-    //
-    //     foreach (string searchTerm in searchTerms)
-    //     {
-    //         var request = await httpClient.GetAsync(
-    //             $"https://newsapi.org/v2/everything?q={searchTerm}&apiKey={newsApiKey}");
-    //         
-    //         if (request.IsSuccessStatusCode)
-    //         {
-    //             var jsonString = await request.Content.ReadAsStringAsync();
-    //             List<NewsArticle?> newsArticles = new List<NewsArticle?>();
-    //             
-    //             using (JsonDocument doc = JsonDocument.Parse(jsonString))
-    //             {
-    //                 // Get the root element
-    //                 JsonElement root = doc.RootElement;
-    //
-    //                 // Assuming "articles" is the name of the array in the JSON
-    //                 JsonElement articles = root.GetProperty("articles");
-    //
-    //                 // Iterate through each article in the array
-    //                 foreach (JsonElement article in articles.EnumerateArray())
-    //                 {
-    //                     NewsArticle newsArticle = new NewsArticle
-    //                     {
-    //                         url = GetJsonPropertyValue("url", article),
-    //                         author = GetJsonPropertyValue("author", article),
-    //                         title = GetJsonPropertyValue("title", article),
-    //                         description = GetJsonPropertyValue("description", article),
-    //                         content = GetJsonPropertyValue("content", article)
-    //                     };
-    //
-    //                     newsArticles.Add(newsArticle);
-    //                 }
-    //             }
-    //             
-    //             Console.WriteLine("News API Request Successful");
-    //             return newsArticles;
-    //
-    //             string GetJsonPropertyValue(string propertyName, JsonElement element)
-    //             {
-    //                 return element.TryGetProperty(propertyName, out JsonElement value) ? value.GetString() : null;
-    //             }
-    //         }
-    //     }
-    //     throw new Exception("News API Request Failure");
-    // }
+    public async Task<List<Article>> GetNews(DateTime dateTaken, List<string?>? searchTerms)
+    {
+        var year = dateTaken.Year;
+        var month = dateTaken.Month;
+        var day = dateTaken.Day;
 
-    // private List<string> AddressToSearchTerms(string address)
-    // {
-    //     
-    // }
+        var date = $"{year}-{month}-{day}";
+        
+        var client = new NewsSearchClient(new ApiKeyServiceClientCredentials(_bingApiKey));
 
-    private struct NewsArticle
+        List<Article> articles = new List<Article>();
+        
+        foreach (string? searchTerm in searchTerms)
+        {
+            var newsResults = await client.News.SearchAsync(query: searchTerm, count: 100, sortBy: "Date");
+            
+            if (newsResults.Value.Count < 5) continue;
+            
+            Console.WriteLine("Search Term: " + searchTerm);
+            Console.WriteLine($"TotalEstimatedMatches value: {newsResults.TotalEstimatedMatches}");
+            Console.WriteLine($"News result count: {newsResults.Value.Count}");
+
+            foreach (var newsResult in newsResults.Value)
+            {
+                if (!newsResult.DatePublished.Contains(date)) continue;
+                
+                Article article = new Article();
+
+                article.url = newsResult.Url;
+                article.provider = newsResult.Provider[0].Name;
+                article.title = newsResult.Name;
+                article.description = newsResult.Description;
+                
+                articles.Add(article);
+            }
+            return articles;
+        }
+        throw new Exception("News API Request Failure");
+    }
+
+    public struct Article
     {
         public string url;
-        public string author;
+        public string provider;
         public string title;
         public string description;
-        public string content;
     }
 }
