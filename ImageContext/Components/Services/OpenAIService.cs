@@ -6,11 +6,11 @@ using OpenAI_API.Models;
 
 namespace ImageContext.Components.Services;
 
-public class OpenAIService(IConfiguration config)
+public class OpenAIService(IConfiguration configuration)
 {
-    private OpenAIAPI _api = new(config["OpenAIKey"]);
-    
-    public async Task<string?> AddressCorrection(List<string?> originalAddresses, byte[] imageBytes)
+    private readonly OpenAIAPI _api = new(configuration["OpenAIKey"]);
+
+    public async Task<string> AddressCorrection(List<string?> originalAddresses, byte[] imageBytes)
     {
         string addressToInput = "";
         foreach (string s in originalAddresses)
@@ -36,7 +36,7 @@ public class OpenAIService(IConfiguration config)
         return response;
     }
     
-    public async Task<string?> HistoryOfAddress(string? address)
+    public async Task<string> HistoryOfAddress(string? address)
     {
         // Take address and generate 1000 character string about history of place and address
         var chat = _api.Chat.CreateConversation();

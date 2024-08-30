@@ -1,26 +1,32 @@
 ﻿@page "/"
 @using System.Data
 @using ExifLib
+@using Google
 @using ImageContext.Components.Services
 @using ImageMagick
-
-@inject IConfiguration Configuration
+@using Google.Apis.CustomSearchAPI;
+@using Google.Apis.CustomSearchAPI.v1
+@using Google.Apis.Services
+@using OpenAI_API
 
 @rendermode InteractiveServer
 
+@inject GoogleServices googleServices;
+@inject OpenAIService openAIService;
+
 
 <PageTitle>Home</PageTitle>
+
+<img src="@imageSource" alt="{@_address} on {@_dateTaken}" />
 
 <div>Select your file:</div>
 <InputFile OnChange="FileUploaded" accept="image/*" />
 <p role="status">Message: @_resultMessage</p>
 <p>Date Taken: @_dateTaken</p>
-<p>Coordinates: @_coordinates</p>
+<p>Coordinates: @_coordinateString</p>
 <p>Simplified Address: @_address</p>
 <p>Search Terms: @_searchTerms</p>
 <p>History: @_historyOfAddress</p>
-<img src="@imageSource" alt="{@_address} on {@_dateTaken}" />
-
 <a href="@_twitterResultsUrl">Twitter Feed</a>
 
 @code {
@@ -35,7 +41,7 @@
 
     ExifExtractService.ImageMetadata imageMetadata;
     private string _dateTaken;
-    private string _coordinates;
+    private string _coordinateString;
     private string _places;
     private string _address;
     private string _searchTerms;
@@ -96,8 +102,11 @@
             if (imageMetadata.Coordinates != null)
             {
                 // string? places = null;
-                _coordinates = imageMetadata.Coordinates.ToString();
-                var geocodingData = await new GeocodingService().RequestGeocodingApi(Configuration, _httpClient, imageMetadata.Coordinates);
+                var lat = imageMetadata.Coordinates.Value.Item1.ToString();
+                var lng = imageMetadata.Coordinates.Value.Item2.ToString();
+                _coordinateString = $"Latitude: {lat} Longitude: {lng}";
+                var geocodingData = await googleServices.GeocodingApi(lat,lng);
+                
                 var searchTerms = geocodingData.Item1;
                 var formatedAddresses = geocodingData.Item2;
 
@@ -113,30 +122,23 @@
                 var day = imageMetadata.DateTaken.Day;
 
                 _twitterResultsUrl = $"https://twitter.com/search?q=+geocode%3A{imageMetadata.Coordinates.Value.Item1}%2C{imageMetadata.Coordinates.Value.Item2}%2C2mi+since%3A{year}-{month}-{day-1}+until%3A{year}-{month}-{day+1}&src=typed_query";
-
-
-                var openAIService = new OpenAIService(Configuration);
+                
                 _address = await openAIService.AddressCorrection(formatedAddresses, imageBytes);
                 _historyOfAddress = await openAIService.HistoryOfAddress(_address);
 
-                foreach (var term in searchTerms)
-                {
-                    Console.WriteLine(term);
-                }
-                
-                var newsStories = await new NewsService(Configuration, _httpClient).GetNews(imageMetadata.DateTaken, searchTerms);
+                var webResults = await googleServices.SearchApi(searchTerms, imageMetadata.DateTaken);
 
-                foreach (var article in newsStories)
+                foreach (var webResult in webResults)
                 {
-                    Console.WriteLine(article.title);
-                    Console.WriteLine(article.description);
-                    Console.WriteLine(article.provider);
-                    Console.WriteLine(article.url);
+                    Console.WriteLine(webResult.title);
+                    Console.WriteLine(webResult.snippet);
+                    Console.WriteLine(webResult.link);
+                    Console.WriteLine(webResult.thumbnailUrl);
                 }
             }
             else
             {
-                _coordinates = NullMetadataMessage;
+                _coordinateString = NullMetadataMessage;
                 _places = NullMetadataMessage;
                 _address = NullMetadataMessage;
             }

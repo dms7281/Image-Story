@@ -1,4 +1,6 @@
+using System.Web;
 using ImageContext.Components;
+using ImageContext.Components.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,7 +10,18 @@ builder.Services
     .AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddHttpClient();
+builder.Services.AddSingleton<GoogleServices>();
+builder.Services.AddSingleton<OpenAIService>();
+
+builder.Services.AddHttpClient("GoogleGeocoding", httpClient =>
+{
+    httpClient.BaseAddress = new Uri($"https://maps.googleapis.com/maps/api/geocode/");
+});
+
+builder.Services.AddHttpClient("GoogleSearch", httpClient =>
+{
+    httpClient.BaseAddress = new Uri($"https://www.googleapis.com/customsearch/");
+});
 
 var app = builder.Build();
 
