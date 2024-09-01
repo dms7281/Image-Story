@@ -24,10 +24,20 @@
 <p role="status">Message: @_resultMessage</p>
 <p>Date Taken: @_dateTaken</p>
 <p>Coordinates: @_coordinateString</p>
-<p>Simplified Address: @_address</p>
-<p>Search Terms: @_searchTerms</p>
+<p>Address: @_address</p>
 <p>History: @_historyOfAddress</p>
 <a href="@_twitterResultsUrl">Twitter Feed</a>
+<p>Search Term: @_searchTerm</p>
+<p>Results:</p>
+<br/>
+@foreach (var webResult in _webResults)
+{
+    <img src="@webResult.thumbnailUrl" alt="@webResult.title"/>
+    <p>@webResult.title</p>
+    <p>@webResult.snippet</p>
+    <a href="@webResult.link">@webResult.link</a>
+    <br/>
+}
 
 @code {
     private readonly HttpClient _httpClient = new HttpClient();
@@ -44,9 +54,10 @@
     private string _coordinateString;
     private string _places;
     private string _address;
-    private string _searchTerms;
+    private string _searchTerm;
     private string _historyOfAddress;
     private string _twitterResultsUrl = "";
+    private List<WebResult> _webResults = new List<WebResult>();
     
     private string _resultMessage = "Waiting for file upload...";
     private const string SuccessMessage = "Image uploaded successfully";
@@ -107,15 +118,13 @@
                 _coordinateString = $"Latitude: {lat} Longitude: {lng}";
                 var geocodingData = await googleServices.GeocodingApi(lat,lng);
                 
-                var searchTerms = geocodingData.Item1;
-                var formatedAddresses = geocodingData.Item2;
+                //var searchTerms = geocodingData.Item1;
+                var formatedAddresses = geocodingData;
 
-                _searchTerms = "";
-
-                foreach (var searchTerm in searchTerms)
-                {
-                    _searchTerms += " " + searchTerm;
-                }
+                // foreach (var searchTerm in searchTerms)
+                // {
+                //     _searchTerms += " " + searchTerm;
+                // }
 
                 var year = imageMetadata.DateTaken.Year;
                 var month = imageMetadata.DateTaken.Month;
@@ -125,16 +134,9 @@
                 
                 _address = await openAIService.AddressCorrection(formatedAddresses, imageBytes);
                 _historyOfAddress = await openAIService.HistoryOfAddress(_address);
+                _searchTerm = await openAIService.CreateOptimalSearchTerm(_address);
 
-                var webResults = await googleServices.SearchApi(searchTerms, imageMetadata.DateTaken);
-
-                foreach (var webResult in webResults)
-                {
-                    Console.WriteLine(webResult.title);
-                    Console.WriteLine(webResult.snippet);
-                    Console.WriteLine(webResult.link);
-                    Console.WriteLine(webResult.thumbnailUrl);
-                }
+                _webResults = await googleServices.SearchApi(_searchTerm, imageMetadata.DateTaken);
             }
             else
             {
