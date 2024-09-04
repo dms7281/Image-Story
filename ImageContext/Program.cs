@@ -12,6 +12,7 @@ builder.Services
 
 builder.Services.AddSingleton<GoogleServices>();
 builder.Services.AddSingleton<OpenAIService>();
+builder.Services.AddSingleton<WeatherService>();
 
 builder.Services.AddHttpClient("GoogleGeocoding", httpClient =>
 {
@@ -21,6 +22,11 @@ builder.Services.AddHttpClient("GoogleGeocoding", httpClient =>
 builder.Services.AddHttpClient("GoogleSearch", httpClient =>
 {
     httpClient.BaseAddress = new Uri($"https://www.googleapis.com/customsearch/");
+});
+
+builder.Services.AddHttpClient("HistoricalWeatherData", httpClient =>
+{
+    httpClient.BaseAddress = new Uri($"https://api.openweathermap.org/data/3.0/onecall/");
 });
 
 var app = builder.Build();

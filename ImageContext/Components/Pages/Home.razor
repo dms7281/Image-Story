@@ -13,17 +13,19 @@
 
 @inject GoogleServices googleServices;
 @inject OpenAIService openAIService;
+@inject WeatherService weatherService;
 
 
 <PageTitle>Home</PageTitle>
 
-<img src="@imageSource" alt="{@_address} on {@_dateTaken}" />
-
 <div>Select your file:</div>
 <InputFile OnChange="FileUploaded" accept="image/*" />
 <p role="status">Message: @_resultMessage</p>
+
+<img src="@imageSource" alt="{@_address} on {@_dateTaken}" />
 <p>Date Taken: @_dateTaken</p>
 <p>Coordinates: @_coordinateString</p>
+<p>Temperature: @_weatherResult.temp Feels Like: @_weatherResult.feelsLikeTemp Humidity: @_weatherResult.humidity Wind Speed: @_weatherResult.windSpeed Description: @_weatherResult.description</p>
 <p>Address: @_address</p>
 <p>History: @_historyOfAddress</p>
 <a href="@_twitterResultsUrl">Twitter Feed</a>
@@ -40,7 +42,8 @@
 }
 
 @code {
-    private readonly HttpClient _httpClient = new HttpClient();
+    
+    private DateTime lastSubmissionTime = DateTime.MinValue;
     
     // Example byte array for demonstration
     private byte[] imageBytes;
@@ -58,6 +61,7 @@
     private string _historyOfAddress;
     private string _twitterResultsUrl = "";
     private List<WebResult> _webResults = new List<WebResult>();
+    private WeatherResult _weatherResult = new WeatherResult();
     
     private string _resultMessage = "Waiting for file upload...";
     private const string SuccessMessage = "Image uploaded successfully";
@@ -75,6 +79,14 @@
 
         try
         {
+            if (DateTime.Now < lastSubmissionTime.AddSeconds(45))
+            {
+                throw new Exception("Please wait before submitting another photo.");
+            }
+
+            // Update the last submission time
+            lastSubmissionTime = DateTime.Now;
+            
             // Read the file into a memory stream
             using var stream = new MemoryStream();
             await e.File.OpenReadStream(maxAllowedSize: 1024 * 6000).CopyToAsync(stream);
@@ -112,19 +124,12 @@
 
             if (imageMetadata.Coordinates != null)
             {
-                // string? places = null;
                 var lat = imageMetadata.Coordinates.Value.Item1.ToString();
                 var lng = imageMetadata.Coordinates.Value.Item2.ToString();
                 _coordinateString = $"Latitude: {lat} Longitude: {lng}";
                 var geocodingData = await googleServices.GeocodingApi(lat,lng);
                 
-                //var searchTerms = geocodingData.Item1;
                 var formatedAddresses = geocodingData;
-
-                // foreach (var searchTerm in searchTerms)
-                // {
-                //     _searchTerms += " " + searchTerm;
-                // }
 
                 var year = imageMetadata.DateTaken.Year;
                 var month = imageMetadata.DateTaken.Month;
@@ -137,6 +142,8 @@
                 _searchTerm = await openAIService.CreateOptimalSearchTerm(_address);
 
                 _webResults = await googleServices.SearchApi(_searchTerm, imageMetadata.DateTaken);
+
+                _weatherResult = await weatherService.GetWeatherDateLocation(lat, lng, imageMetadata.DateTaken);
             }
             else
             {

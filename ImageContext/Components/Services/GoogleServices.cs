@@ -158,6 +158,7 @@ public class GoogleServices(IHttpClientFactory httpClientFactory, IConfiguration
     }
 }
 
+
 public struct WebResult
 {
     public string title;
@@ -165,6 +166,3 @@ public struct WebResult
     public string snippet;
     public string thumbnailUrl;
 }
-
-
-    
