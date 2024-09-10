@@ -16,63 +16,68 @@
 @inject WeatherService weatherService;
 
 <PageTitle>Home</PageTitle>
-
 <div class="container-fluid">
     <div class="row" style="gap: 10px;">
         <div class="col text-center">
-            <h1>What Was Happening?</h1>
-            <div class="overflow-scroll d-flex justify-content-center" style="max-height: 75vh; overflow-y: auto;">
-                <div class="d-flex flex-wrap" style="gap: 10px;">
-
+            <h1 class="card-title">What Was Happening?</h1>
+            <div class="overflow-scroll d-flex justify-content-center card-background" style="max-height: 75vh; overflow-y: auto;">
+                <div class="d-flex flex-wrap justify-content-center" style="gap: 10px;">
                     @foreach (var webResult in _webResults)
                     {
-                        <a href="@webResult.link" class="text-decoration-none">
-                            <div class="card" style="width: 275px; height: 325px">
-                                <img class="card-img-top" src="@webResult.thumbnailUrl" style="width: 225px; height: 225px; object-fit: cover;"/>
-                                <div class="card-body">
-                                    <h5 class="card-title">@webResult.title</h5>
+                        <a href="@webResult.link" style="color: black; text-decoration: none;">
+                            <div class="polaroid-card small-polaroid-size">
+                                <!-- Polaroid Image with Borders -->
+                                <img class="polaroid-image" src="@webResult.thumbnailUrl" alt="Polaroid Image" />
+        
+                                <!-- Polaroid Caption Area -->
+                                <div class="polaroid-caption">
+                                    <h5 class="polaroid-title">@webResult.title</h5>
                                 </div>
                             </div>
                         </a>
-
-
-                        @* <img src="@webResult.thumbnailUrl" alt="@webResult.title"/> *@
-                        @* <p>@webResult.title</p> *@
-                        @* <p>@webResult.snippet</p> *@
-                        @* <a href="@webResult.link">@webResult.link</a> *@
-                        @* <br/> *@
                     }
 
                 </div>
             </div>
 
-            <a href="@_twitterResultsUrl">Twitter Feed</a>
+            <div class="card-background">
+                <a href="@_twitterResultsUrl" style="color: white; text-decoration: none;">
+                    <h1>What Were People Tweeting?</h1>
+                </a>
+            </div>
         </div>
         <div class="col text-center">
             <p role="status">Message: @_resultMessage</p>
             <div>Select your file:</div>
             <InputFile OnChange="FileUploaded" accept="image/*"/>
             <br/>
-            <img src="@imageSource" alt="{@_address} on {@_dateTaken}"/>
-            <p>Date Taken: @_dateTaken</p>
+            <div class="d-flex justify-content-center">
+                <div class="polaroid-card large-polaroid-size">
+                    <!-- Polaroid Image with Borders -->
+                    <img class="polaroid-image" src="@imageSource" alt="Polaroid Image" />
+
+                    <!-- Polaroid Caption Area -->
+                    <div class="polaroid-caption">
+                        <h5 class="polaroid-title">@_searchTerm</h5>
+                        <p>Date Taken: @_dateTaken</p>
+                    </div>
+                </div>
+            </div>
             <p>Coordinates: @_coordinateString</p>
             <p>Search Term: @_searchTerm</p>
             <p>Address: @_address</p>
             <p>Temperature: @_weatherResult.temp Feels Like: @_weatherResult.feelsLikeTemp Humidity: @_weatherResult.humidity Wind Speed: @_weatherResult.windSpeed Description: @_weatherResult.description</p>
         </div>
         <div class="col text-center">
-            <h1>The History</h1>
-            <p>History: @_historyOfAddress</p>
+            <h1 class="card-title">The History</h1>
+            <div class="card-background">
+                <p style="font-size: 100%">@_historyOfAddress</p>
+            </div>
+
+            <a href="https://camschmidt.com" target="_blank">About</a>
         </div>
     </div>
 </div>
-
-<script>
-    function handleImageError(imgElement, fallbackUrl) {
-        imgElement.onerror = null; // Prevent infinite loop if fallback also fails
-        imgElement.src = fallbackUrl; // Set the fallback image URL
-    }
-</script>
 
 @code {
 
