@@ -1,3 +1,8 @@
+main {
+  background-color: #d9d9d9;
+  padding: 30px;
+}
+
 html, body {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
@@ -54,13 +59,13 @@ h1 {
   border-color: #929292;
 }
 
-.beth-ellen-regular, .polaroid-card p, .small-polaroid p, .large-polaroid p, .large-polaroid h2, .large-polaroid h1 {
+.beth-ellen-regular, .large-polaroid h2, .large-polaroid h1, .mini-polaroid-link article p {
   font-family: "Beth Ellen", cursive;
   font-weight: 400;
   font-style: normal;
 }
 
-.courier-prime-regular, .history-card p, .single-title, .title, .button-title, .card-title {
+.courier-prime-regular, .history-card p, .polaroid-extend, .polaroid-extend-back, .polaroid-extend-weather, .section-header, .section-header-white-link, .section-header-black {
   font-family: "Courier Prime", system-ui;
   font-weight: 400;
   font-style: normal;
@@ -72,114 +77,113 @@ h1 {
   font-style: normal;
 }
 
-.small-polaroid {
-  width: 34vw; /* Responsive width */
-  height: 42vw; /* Responsive height */
-  max-width: 340px; /* Max width for larger screens */
-  min-width: 255px; /* Min width for smaller screens */
-  max-height: 420px;
-  min-height: 315px;
+.hidden-link, .section-header-white-link a, .mini-polaroid-link {
+  color: black;
+  text-decoration: none;
 }
 
-.large-polaroid {
-  width: 67.32vw; /* Responsive width */
-  height: 83.16vw; /* Responsive height */
-  max-width: 673.2px; /* Max width for larger screens */
-  min-width: 579.7px; /* Min width for smaller screens */
-  max-height: 831.6px;
-  min-height: 716.1px;
-  padding: 0;
-}
-.large-polaroid h1 {
-  margin: 0;
-  padding: 0;
-  font-size: clamp(1rem, 3vw, 3.75rem);
-}
-.large-polaroid h2 {
-  margin: 0;
-  padding-bottom: 10px;
-  font-size: clamp(0.75rem, 1.5vw, 2.5rem);
-}
-
-.polaroid-card, .small-polaroid, .large-polaroid {
-  background-color: white; /* Polaroid frame color */
+.polaroid-card, .large-polaroid, .mini-polaroid-link article {
+  background-color: white;
   padding: 10px;
-  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2); /* Adds depth for the Polaroid effect */
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between; /* Spaces out the image and caption */
+  justify-content: space-between;
 }
-.polaroid-card img, .small-polaroid img, .large-polaroid img {
+.polaroid-card img, .large-polaroid img, .mini-polaroid-link article img {
   width: 100%;
   aspect-ratio: 1/1; /* Ensures the image remains square */
   object-fit: cover; /* Crop image to fit within the square */
   border: 5px solid white; /* White border to mimic Polaroid photo */
   border-bottom: none; /* Remove bottom border to leave space for caption */
 }
-.polaroid-card p, .small-polaroid p, .large-polaroid p {
+
+.mini-polaroid-link article {
+  width: 272px;
+  height: 336px;
+  padding: 10px;
+}
+.mini-polaroid-link article p {
   margin: 0; /* Remove default margin */
   padding-top: 5px; /* Space between image and caption */
   text-align: center; /* Center the text */
+  font-size: 0.9rem;
 }
 
-@media (max-width: 600px) {
-  .polaroid-card, .small-polaroid, .large-polaroid {
-    width: 40vw; /* Increase size on small screens */
-    height: 50vw;
-  }
-  .polaroid-title {
-    font-size: 3vw; /* Make the text larger on small screens */
-  }
+.large-polaroid {
+  width: 25.5vw;
+  height: 31.5vw;
+  max-width: 680px;
+  max-height: 840px;
+  min-width: 425px;
+  min-height: 525px;
+  padding: 10px;
 }
-.title, .button-title, .card-title {
+.large-polaroid h1 {
+  margin: 0;
+  padding: 0;
+  font-size: clamp(1.75rem, 2vw, 2.5rem);
+}
+.large-polaroid h2 {
+  font-size: clamp(1.5rem, 1.5vw, 2rem);
+}
+
+.section-header, .section-header-white-link, .section-header-black {
   font-size: 3rem;
   margin: 0;
   padding-top: 10px;
   padding-bottom: 10px;
 }
 
-.card-title {
+.section-header-black {
   color: white;
   background-color: #2c3040;
 }
 
-.button-title {
+.section-header-white-link {
   background-color: #5d5d5d;
   padding: 10px;
   margin-top: 20px;
 }
-.button-title a {
-  text-decoration: none;
-}
-.button-title a h1 {
-  color: black;
+.section-header-white-link a h1 {
   background-color: white;
   padding: 10px;
 }
 
-.single-title {
-  font-size: 1rem;
+.polaroid-extend, .polaroid-extend-back, .polaroid-extend-weather {
   background-color: white;
   padding: 10px;
-  margin-top: 20px; /* Replace inline margin-top with CSS */
-}
-.single-title h1 {
-  color: black;
-  padding: 10px; /* Move padding here from inline */
-}
-.single-title h2 {
-  color: black;
-  padding: 10px; /* Move padding here from inline */
+  margin-top: 20px;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-main {
-  background-color: #d9d9d9;
-  padding: 30px;
+.polaroid-extend-weather {
+  width: 25.5vw;
+  height: 9.25vw;
+  max-width: 680px;
+  max-height: 175px;
+  min-width: 425px;
+  min-height: 150px;
+  margin-bottom: 15px;
+}
+.polaroid-extend-weather table {
+  width: 100%;
+  text-align: center;
+  vertical-align: middle;
+}
+.polaroid-extend-weather table th:not(:last-child), .polaroid-extend-weather table td:not(:last-child) {
+  border-right: 1px solid #000;
+}
+.polaroid-extend-weather table tr th {
+  font-size: clamp(2rem, 2.5vw, 3rem);
+}
+.polaroid-extend-weather table tr td {
+  font-size: clamp(1.15rem, 1.25vw, 1.5rem);
 }
 
 .scrollable-card, .history-card {
-  max-height: 75vh;
+  max-height: 65vh;
   overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
@@ -189,19 +193,14 @@ main {
 }
 
 .history-card {
-  padding: 15px; /* Move padding here from inline */
+  padding: 15px;
 }
 .history-card p {
   color: black;
   background-color: white;
   margin: 0;
-  padding: 15px; /* Move padding here from inline */
-  font-size: clamp(0.5rem, 1.5vw, 1.15rem);
-}
-
-.polaroid-link {
-  color: black;
-  text-decoration: none;
+  padding: 15px;
+  font-size: clamp(1.25rem, 1.5vw, 1.5rem);
 }
 
 /*# sourceMappingURL=app.css.map */

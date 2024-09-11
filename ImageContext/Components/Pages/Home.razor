@@ -18,33 +18,33 @@
 <PageTitle>Home</PageTitle>
 <div class="container-fluid">
     <div class="row">
-        <section class="col text-center">
-            <h1 class="card-title">
+        <section class="col-lg-4 col-sm-12 text-center">
+            <h1 class="section-header-black">
                 What Was Happening?
             </h1>
             <div class="scrollable-card d-flex flex-wrap justify-content-center">
                 @foreach (var webResult in _webResults) 
                 {
-                    <a href="@webResult.link" class="polaroid-link">
-                        <article class="small-polaroid">
+                    <a href="@webResult.link" class="mini-polaroid-link">
+                        <article>
                             <img src="@webResult.thumbnailUrl" alt="@webResult.snippet" />
                             <p>@webResult.title</p>
                         </article>
                     </a>
                 }
             </div>
-            <article class="button-title">
+            <article class="section-header-white-link">
                 <a href="@_twitterResultsUrl">
                     <h1>What Were People Tweeting?</h1>
                 </a>
             </article>
         </section>
-        <section class="col text-center">
+        <section class="col-lg-4 col-sm-12 text-center">
             <p role="status">Message: @_resultMessage</p>
             <InputFile OnChange="FileUploaded" accept="image/*" />
             
             <br/>
-            <div class="d-flex justify-content-center">
+            <div class="d-flex flex-wrap justify-content-center">
                 <div class="large-polaroid">
                     <img src="@imageSource" alt="Polaroid Image" />
                     <h1>@_searchTerm</h1>
@@ -52,24 +52,39 @@
                     
                 </div>
             </div>
-            <article class="single-title">
-                <h1>@_weatherResult.temp F | @_weatherResult.windSpeed MPH | @_weatherResult.humidity</h1>
-                <h2>Temperature  Wind Speed  Humidity</h2>
-                <h2>@_weatherResult.description</h2>
-            </article>
+
+            <div class="d-flex justify-content-center">
+                <article class="polaroid-extend-weather">
+                    <table>
+                        <tr>
+                            <th>@((int)_weatherResult.temp)&deg;F</th>
+                            <th>@((int)_weatherResult.windSpeed)MPH</th>
+                            <th>@((int)_weatherResult.humidity)&deg;</th>
+                        </tr>
+                        <tr>
+                            <td>Temperature</td>
+                            <td>Wind Speed</td>
+                            <td>Humidity</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">@_weatherResult.description</td>
+                        </tr>
+                        
+                    </table>
+                </article>
+            </div>
             @* <p>Coordinates: @_coordinateString</p> *@
             @* <p>Address: @_address</p> *@
-            <p>Temperature: @_weatherResult.temp Feels Like: @_weatherResult.feelsLikeTemp Humidity: @_weatherResult.humidity Wind Speed: @_weatherResult.windSpeed Description: @_weatherResult.description</p>
         </section>
-        <section class="col text-center">
-            <h1 class="card-title">
+        <section class="col-lg-4 col-sm-12 text-center">
+            <h1 class="section-header-black">
                 The History
             </h1>
             <article class="history-card">
                 <p>@_historyOfAddress</p>
             </article>
 
-            <article class="button-title">
+            <article class="section-header-white-link">
                 <a href="https://camschmidt.com">
                     <h1>About</h1>
                 </a>
