@@ -17,65 +17,64 @@
 
 <PageTitle>Home</PageTitle>
 <div class="container-fluid">
-    <div class="row" style="gap: 10px;">
-        <div class="col text-center">
-            <h1 class="card-title">What Was Happening?</h1>
-            <div class="overflow-scroll d-flex justify-content-center card-background" style="max-height: 75vh; overflow-y: auto;">
-                <div class="d-flex flex-wrap justify-content-center" style="gap: 10px;">
-                    @foreach (var webResult in _webResults)
-                    {
-                        <a href="@webResult.link" style="color: black; text-decoration: none;">
-                            <div class="polaroid-card small-polaroid-size">
-                                <!-- Polaroid Image with Borders -->
-                                <img class="polaroid-image" src="@webResult.thumbnailUrl" alt="Polaroid Image" />
-        
-                                <!-- Polaroid Caption Area -->
-                                <div class="polaroid-caption">
-                                    <h5 class="polaroid-title">@webResult.title</h5>
-                                </div>
-                            </div>
-                        </a>
-                    }
-
-                </div>
+    <div class="row">
+        <section class="col text-center">
+            <h1 class="card-title">
+                What Was Happening?
+            </h1>
+            <div class="scrollable-card d-flex flex-wrap justify-content-center">
+                @foreach (var webResult in _webResults) 
+                {
+                    <a href="@webResult.link" class="polaroid-link">
+                        <article class="small-polaroid">
+                            <img src="@webResult.thumbnailUrl" alt="@webResult.snippet" />
+                            <p>@webResult.title</p>
+                        </article>
+                    </a>
+                }
             </div>
-
-            <div class="card-background">
-                <a href="@_twitterResultsUrl" style="color: white; text-decoration: none;">
+            <article class="button-title">
+                <a href="@_twitterResultsUrl">
                     <h1>What Were People Tweeting?</h1>
                 </a>
-            </div>
-        </div>
-        <div class="col text-center">
+            </article>
+        </section>
+        <section class="col text-center">
             <p role="status">Message: @_resultMessage</p>
-            <div>Select your file:</div>
-            <InputFile OnChange="FileUploaded" accept="image/*"/>
+            <InputFile OnChange="FileUploaded" accept="image/*" />
+            
             <br/>
             <div class="d-flex justify-content-center">
-                <div class="polaroid-card large-polaroid-size">
-                    <!-- Polaroid Image with Borders -->
-                    <img class="polaroid-image" src="@imageSource" alt="Polaroid Image" />
-
-                    <!-- Polaroid Caption Area -->
-                    <div class="polaroid-caption">
-                        <h5 class="polaroid-title">@_searchTerm</h5>
-                        <p>Date Taken: @_dateTaken</p>
-                    </div>
+                <div class="large-polaroid">
+                    <img src="@imageSource" alt="Polaroid Image" />
+                    <h1>@_searchTerm</h1>
+                    <h2>@_dateTaken.ToString("MMMM") @_dateTaken.Day, @_dateTaken.Year</h2>
+                    
                 </div>
             </div>
-            <p>Coordinates: @_coordinateString</p>
-            <p>Search Term: @_searchTerm</p>
-            <p>Address: @_address</p>
+            <article class="single-title">
+                <h1>@_weatherResult.temp F | @_weatherResult.windSpeed MPH | @_weatherResult.humidity</h1>
+                <h2>Temperature  Wind Speed  Humidity</h2>
+                <h2>@_weatherResult.description</h2>
+            </article>
+            @* <p>Coordinates: @_coordinateString</p> *@
+            @* <p>Address: @_address</p> *@
             <p>Temperature: @_weatherResult.temp Feels Like: @_weatherResult.feelsLikeTemp Humidity: @_weatherResult.humidity Wind Speed: @_weatherResult.windSpeed Description: @_weatherResult.description</p>
-        </div>
-        <div class="col text-center">
-            <h1 class="card-title">The History</h1>
-            <div class="card-background">
-                <p style="font-size: 100%">@_historyOfAddress</p>
-            </div>
+        </section>
+        <section class="col text-center">
+            <h1 class="card-title">
+                The History
+            </h1>
+            <article class="history-card">
+                <p>@_historyOfAddress</p>
+            </article>
 
-            <a href="https://camschmidt.com" target="_blank">About</a>
-        </div>
+            <article class="button-title">
+                <a href="https://camschmidt.com">
+                    <h1>About</h1>
+                </a>
+            </article>
+        </section>
     </div>
 </div>
 
@@ -91,7 +90,7 @@
     private string imageSource;
 
     ExifExtractService.ImageMetadata imageMetadata;
-    private string _dateTaken;
+    private DateTime _dateTaken;
     private string _coordinateString;
     private string _places;
     private string _address;
@@ -154,11 +153,7 @@
 
             if (imageMetadata.DateTaken != null)
             {
-                _dateTaken = imageMetadata.DateTaken.ToString();
-            }
-            else
-            {
-                _dateTaken = NullMetadataMessage;
+                _dateTaken = imageMetadata.DateTaken;
             }
 
             if (imageMetadata.Coordinates != null)
@@ -170,9 +165,9 @@
 
                 var formatedAddresses = geocodingData;
 
-                var year = imageMetadata.DateTaken.Year;
-                var month = imageMetadata.DateTaken.Month;
-                var day = imageMetadata.DateTaken.Day;
+                var year = _dateTaken.Year;
+                var month = _dateTaken.Month;
+                var day = _dateTaken.Day;
 
                 _twitterResultsUrl = $"https://twitter.com/search?q=+geocode%3A{imageMetadata.Coordinates.Value.Item1}%2C{imageMetadata.Coordinates.Value.Item2}%2C2mi+since%3A{year}-{month}-{day - 1}+until%3A{year}-{month}-{day + 1}&src=typed_query";
 
