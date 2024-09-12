@@ -25,9 +25,9 @@
             <div class="scrollable-card d-flex flex-wrap justify-content-center">
                 @foreach (var webResult in _webResults) 
                 {
-                    <a href="@webResult.link" class="mini-polaroid-link">
+                    <a href="@webResult.title" class="mini-polaroid-link">
                         <article>
-                            <img src="@webResult.thumbnailUrl" alt="@webResult.snippet" />
+                            <img src="@webResult.thumbnailUrl" alt="@webResult.snippit" />
                             <p>@webResult.title</p>
                         </article>
                     </a>
@@ -58,7 +58,7 @@
                     <table>
                         <tr>
                             <th>@((int)_weatherResult.temp)&deg;F</th>
-                            <th>@((int)_weatherResult.windSpeed)MPH</th>
+                            <th>@(_weatherResult.windSpeed)MPH</th>
                             <th>@((int)_weatherResult.humidity)&deg;</th>
                         </tr>
                         <tr>
@@ -67,7 +67,7 @@
                             <td>Humidity</td>
                         </tr>
                         <tr>
-                            <td colspan="3">@_weatherResult.description</td>
+                            <td colspan="3">@_weatherResult.desc</td>
                         </tr>
                         
                     </table>
@@ -96,24 +96,19 @@
 @code {
 
     private DateTime lastSubmissionTime = DateTime.MinValue;
-
-    // Example byte array for demonstration
-    private byte[] imageBytes;
-
-    private string imageBase64Data;
-    private string imageMimeType = "image/jpeg"; // Adjust based on the image type
+    
     private string imageSource;
 
-    ExifExtractService.ImageMetadata imageMetadata;
+    //ExifExtractService.ImageMetadata imageMetadata;
     private DateTime _dateTaken;
-    private string _coordinateString;
+    private (double, double)? _coordinates;
     private string _places;
     private string _address;
     private string _searchTerm;
     private string _historyOfAddress;
     private string _twitterResultsUrl = "";
-    private List<WebResult> _webResults = new List<WebResult>();
-    private WeatherResult _weatherResult = new WeatherResult();
+    private List<(string title, string link, string snippit, string? thumbnailUrl)>? _webResults = new List<(string, string, string, string?)>();
+    private (double temp, double windSpeed, double humidity, string desc) _weatherResult;
 
     private string _resultMessage = "Waiting for file upload...";
     private const string SuccessMessage = "Image uploaded successfully";
@@ -145,7 +140,7 @@
             stream.Position = 0;
             Console.WriteLine("Read file into memory stream");
 
-            using var image = new MagickImage(stream);
+            var image = new MagickImage(stream);
             if (e.File.ContentType == "image/heif")
             {
                 // Convert image to Jpg, flush stream, rewrite image to stream
@@ -154,52 +149,85 @@
                 await image.WriteAsync(stream);
                 stream.Position = 0;
             }
-
+            
             image.Resize(512, 512);
-            imageBytes = image.ToByteArray();
-            imageBase64Data = Convert.ToBase64String(imageBytes);
-            imageSource = $"data:image/jpeg;base64,{imageBase64Data}";
-            stream.Position = 0;
+            imageSource = $"data:image/jpeg;base64,{image.ToBase64()}";
+            
+            // Helper method to extract Exif data
+            IExifValue<TValueType>? GetExifData<TValueType>(ExifTag<TValueType> tag) => image.GetExifProfile()?.GetValue(tag);
 
-            // Extract EXIF data from stream
-            imageMetadata = await new ExifExtractService().ExtractExifData(stream);
+            // Retrieve Exif values once
+            var dateTaken = GetExifData(ExifTag.DateTimeOriginal)?.Value;
+            var latDms = GetExifData(ExifTag.GPSLatitude)?.Value;
+            var latHem = GetExifData(ExifTag.GPSLatitudeRef)?.Value;
+            var lngDms = GetExifData(ExifTag.GPSLongitude)?.Value;
+            var lngHem = GetExifData(ExifTag.GPSLongitudeRef)?.Value;
 
-            _resultMessage = SuccessMessage;
+            bool coordinatesExist = latDms != null && latHem != null && lngDms != null && lngHem != null;
 
-            if (imageMetadata.DateTaken != null)
+            // Cases based on available data
+            if (dateTaken != null && coordinatesExist)
             {
-                _dateTaken = imageMetadata.DateTaken;
+                _dateTaken = DateTime.ParseExact(dateTaken, "yyyy:MM:dd HH:mm:ss", null);
+                
+                _coordinates = (
+                    ConvertGpsToDecimal(latDms, latHem),
+                    ConvertGpsToDecimal(lngDms, lngHem)
+                );
+                
+                await DateAndLocation(_dateTaken, _coordinates.Value);
+            }
+            else if(dateTaken == null)
+            {
+                throw new Exception("No Date Taken Data Found");
+            }
+            else if(!coordinatesExist)
+            {
+                throw new Exception("No Location Data Found");
             }
 
-            if (imageMetadata.Coordinates != null)
+            async Task DateAndLocation(DateTime dateTaken, (double, double) coordinates)
             {
-                var lat = imageMetadata.Coordinates.Value.Item1.ToString();
-                var lng = imageMetadata.Coordinates.Value.Item2.ToString();
-                _coordinateString = $"Latitude: {lat} Longitude: {lng}";
-                var geocodingData = await googleServices.GeocodingApi(lat, lng);
-
-                var formatedAddresses = geocodingData;
-
-                var year = _dateTaken.Year;
-                var month = _dateTaken.Month;
-                var day = _dateTaken.Day;
-
-                _twitterResultsUrl = $"https://twitter.com/search?q=+geocode%3A{imageMetadata.Coordinates.Value.Item1}%2C{imageMetadata.Coordinates.Value.Item2}%2C2mi+since%3A{year}-{month}-{day - 1}+until%3A{year}-{month}-{day + 1}&src=typed_query";
-
-                _address = await openAIService.AddressCorrection(formatedAddresses, imageBytes);
+                var lat = coordinates.Item1;
+                var lng = coordinates.Item2;
+            
+                _twitterResultsUrl = $"https://twitter.com/search?q=+geocode%3A{lat}%2C{lng}%2C2mi+since%3A{dateTaken.Year}-{dateTaken.Month}-{dateTaken.Day - 1}+until%3A{dateTaken.Year}-{dateTaken.Month}-{dateTaken.Day + 1}&src=typed_query";
+            
+                var formatedAddresses = await googleServices.GeocodingApi(coordinates);
+                _address = await openAIService.AddressCorrection(formatedAddresses, image.ToByteArray());
                 _historyOfAddress = await openAIService.HistoryOfAddress(_address);
                 _searchTerm = await openAIService.CreateOptimalSearchTerm(_address);
-
-                _webResults = await googleServices.SearchApi(_searchTerm, imageMetadata.DateTaken);
-
-                _weatherResult = await weatherService.GetWeatherDateLocation(lat, lng, imageMetadata.DateTaken);
+            
+                _webResults = await googleServices.SearchLocationTime(_searchTerm, dateTaken);
+            
+                _weatherResult = await weatherService.GetWeatherDateLocation(coordinates, dateTaken);
             }
-            else
-            {
-                _coordinateString = NullMetadataMessage;
-                _places = NullMetadataMessage;
-                _address = NullMetadataMessage;
-            }
+            
+            // async Task LocationOnly((double, double) coordinates)
+            // {
+            //     var lat = coordinates.Item1;
+            //     var lng = coordinates.Item2;
+            //
+            //     _twitterResultsUrl = $"https://twitter.com/search?q=+geocode%3A{lat}%2C{lng}%2C2mi&src=typed_query";
+            //
+            //     var formatedAddresses = await googleServices.GeocodingApi(coordinates);
+            //     _address = await openAIService.AddressCorrection(formatedAddresses, image.ToByteArray());
+            //     _historyOfAddress = await openAIService.HistoryOfAddress(_address);
+            //     _searchTerm = await openAIService.CreateOptimalSearchTerm(_address);
+            //
+            //     _webResults = await googleServices.SearchLocation(_searchTerm);
+            //
+            //     _weatherResult = await weatherService.GetWeatherDateLocation(coordinates, DateTime.Now);
+            // }
+            //
+            // async Task DateOnly(DateTime dateTaken)
+            // {
+            //     _twitterResultsUrl = $"https://twitter.com/search?q=+since%3A{dateTaken.Year}-{dateTaken.Month}-{dateTaken.Day - 1}+until%3A{dateTaken.Year}-{dateTaken.Month}-{dateTaken.Day + 1}&src=typed_query";
+            //     
+            //     _searchTerm = ""; // Search Term is nothing, results in top results from around the day the photo was taken
+            //     
+            //     _webResults = await googleServices.SearchLocationTime(_searchTerm, dateTaken);
+            // }
         }
         catch (ExifLibException ex)
         {
@@ -209,8 +237,17 @@
         {
             _resultMessage = $"Error: {ex.Message}";
         }
-
-
     }
+    
+    static double ConvertGpsToDecimal(Rational[] coordinate, string? hemisphere)
+    {
+        var degrees = coordinate[0].ToDouble(); var minutes = coordinate[1].ToDouble(); var seconds = coordinate[2].ToDouble();
 
+        var decimalCoordinate = degrees + (minutes / 60) + (seconds / 3600);
+
+        // Adjust for hemisphere (N, S, E, W)
+        if (hemisphere == "S" || hemisphere == "W") decimalCoordinate = -1 * decimalCoordinate;
+            
+        return decimalCoordinate;
+    }
 }

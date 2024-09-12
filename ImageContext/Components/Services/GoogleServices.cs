@@ -79,11 +79,11 @@ public class GoogleServices(IHttpClientFactory httpClientFactory, IConfiguration
         }
     }
     
-    public async Task<List<string?>> GeocodingApi (string lat, string lng)
+    public async Task<List<string?>> GeocodingApi ((double,double) coordinates)
     {
         var httpClient = httpClientFactory.CreateClient("GoogleGeocoding");
 
-        var request = await httpClient.GetAsync($"json?latlng={lat},{lng}&key={_key}");
+        var request = await httpClient.GetAsync($"json?latlng={coordinates.Item1},{coordinates.Item2}&key={_key}");
 
         if (request.IsSuccessStatusCode)
         {
@@ -98,14 +98,14 @@ public class GoogleServices(IHttpClientFactory httpClientFactory, IConfiguration
         throw new Exception("Google Geocoding API: Request Failure");
     }
 
-    public async Task<List<WebResult>> SearchApi(string searchPhrase, DateTime date)
+    public async Task<List<(string title, string link, string snippit, string? thumbnailUrl)>> SearchLocationTime(string searchPhrase, DateTime date)
     {
         string afterDate = date.AddDays(-1).ToString("yyyy-MM-dd");
         string beforeDate = date.AddDays(1).ToString("yyyy-MM-dd");
         
         var httpClient = httpClientFactory.CreateClient("GoogleSearch");
 
-        List<WebResult> webResults = new List<WebResult>();
+        List<(string title, string link, string snippit, string? thumbnailUrl)> webResults = new List<(string, string, string, string?)>();
             
         var request = await httpClient.GetAsync($"v1?cx={_googleSearchEngine}&q={searchPhrase}+after:{afterDate}+before:{beforeDate}&key={_key}");
 
@@ -117,31 +117,26 @@ public class GoogleServices(IHttpClientFactory httpClientFactory, IConfiguration
             {
                 JsonElement root = doc.RootElement;
                 JsonElement items = root.GetProperty("items");
-                //Console.WriteLine(items.ToString());
                 foreach (JsonElement item in items.EnumerateArray())
                 {
-                    WebResult webResult = new WebResult();
+                    string? thumbnailUrl = null;
                     
-                    webResult.title = item.GetProperty("title").ToString();
-                    webResult.link = item.GetProperty("link").ToString();
-                    webResult.snippet = item.GetProperty("snippet").ToString();
-
                     if (item.TryGetProperty("pagemap", out JsonElement pagemap))
                     {
                         //Console.WriteLine(pagemap.ToString());
                         if (pagemap.TryGetProperty("cse_thumbnail", out JsonElement thumbnail))
                         {
                             var thumnailLink = thumbnail.EnumerateArray().ToArray()[0].GetProperty("src").ToString();
-                            webResult.thumbnailUrl = thumnailLink;
+                            thumbnailUrl = thumnailLink;
                         }
                     }
                     
-                    //Console.WriteLine(imageObjects.ToString());
-                    
-                    // foreach (JsonElement imageObject in imageObjects.EnumerateArray())
-                    // {
-                    //     webResult.imageLinks.Add(imageObject.GetProperty("contenturl").ToString());
-                    // }
+                    (string title, string link, string snippit, string? thumbnailUrl) webResult = (
+                        item.GetProperty("title").ToString(),
+                        item.GetProperty("link").ToString(),
+                        item.GetProperty("snippet").ToString(),
+                        thumbnailUrl
+                    );
                     
                     webResults.Add(webResult);
                 }
@@ -149,20 +144,54 @@ public class GoogleServices(IHttpClientFactory httpClientFactory, IConfiguration
             }
 
             return webResults;
-        
-            // Console.WriteLine("Google Custom Search API: Request Successful");
-            //     
-            // Console.WriteLine(jsonString);
         }
         throw new Exception("Google Custom Search API: Request Failure");
     }
-}
+    
+    public async Task<List<(string, string, string, string?)>> SearchLocation(string searchPhrase)
+    {
+        var httpClient = httpClientFactory.CreateClient("GoogleSearch");
 
+        List<(string, string, string, string?)> webResults = new List<(string, string, string, string?)>();
+            
+        var request = await httpClient.GetAsync($"v1?cx={_googleSearchEngine}&q={searchPhrase}&key={_key}");
 
-public struct WebResult
-{
-    public string title;
-    public string link;
-    public string snippet;
-    public string thumbnailUrl;
+        if (request.IsSuccessStatusCode)
+        {
+            var jsonString = await request.Content.ReadAsStringAsync();
+            
+            using (JsonDocument doc = JsonDocument.Parse(jsonString))
+            {
+                JsonElement root = doc.RootElement;
+                JsonElement items = root.GetProperty("items");
+                foreach (JsonElement item in items.EnumerateArray())
+                {
+                    string? thumbnailUrl = null;
+                    
+                    if (item.TryGetProperty("pagemap", out JsonElement pagemap))
+                    {
+                        //Console.WriteLine(pagemap.ToString());
+                        if (pagemap.TryGetProperty("cse_thumbnail", out JsonElement thumbnail))
+                        {
+                            var thumnailLink = thumbnail.EnumerateArray().ToArray()[0].GetProperty("src").ToString();
+                            thumbnailUrl = thumnailLink;
+                        }
+                    }
+                    
+                    (string, string, string, string?) webResult = (
+                        item.GetProperty("title").ToString(),
+                        item.GetProperty("link").ToString(),
+                        item.GetProperty("snippet").ToString(),
+                        thumbnailUrl
+                    );
+                    
+                    webResults.Add(webResult);
+                }
+                Console.WriteLine("Google Geocoding API: Returned Formatted Addresses");
+            }
+
+            return webResults;
+        }
+        throw new Exception("Google Custom Search API: Request Failure");
+    }
 }
