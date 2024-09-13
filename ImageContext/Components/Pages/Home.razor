@@ -19,76 +19,112 @@
 <div class="container-fluid">
     <div class="row">
         <section class="col-lg-4 col-sm-12 text-center">
-            <h1 class="section-header-black">
-                What Was Happening?
-            </h1>
-            <div class="scrollable-card d-flex flex-wrap justify-content-center">
-                @foreach (var webResult in _webResults) 
-                {
-                    <a href="@webResult.title" class="mini-polaroid-link">
-                        <article>
-                            <img src="@webResult.thumbnailUrl" alt="@webResult.snippit" />
-                            <p>@webResult.title</p>
-                        </article>
+            @if (webResultsLoaded)
+            {
+                <h1 class="section-header-black">
+                    What Was Happening?
+                </h1>
+                <div class="scrollable-card d-flex flex-wrap justify-content-center">
+                    @foreach (var webResult in _webResults)
+                    {
+                        <a href="@webResult.title" class="mini-polaroid-link">
+                            <article>
+                                @if (webResult.thumbnailUrl != null)
+                                {
+                                    <img src="@webResult.thumbnailUrl" alt="@webResult.snippit"/>
+                                }
+                                else
+                                {
+                                    <img src="nophoto.png"/>
+                                }
+                                <p>@webResult.title</p>
+                            </article>
+                        </a>
+                    }
+                </div>
+            }
+            
+            @if (twitterLoaded)
+            {
+                <article class="section-header-white-link">
+                    <a href="@_twitterResultsUrl">
+                        <h1>What Were People Tweeting?</h1>
                     </a>
-                }
-            </div>
-            <article class="section-header-white-link">
-                <a href="@_twitterResultsUrl">
-                    <h1>What Were People Tweeting?</h1>
-                </a>
-            </article>
+                </article>
+            }
         </section>
         <section class="col-lg-4 col-sm-12 text-center">
             <p role="status">Message: @_resultMessage</p>
             <InputFile OnChange="FileUploaded" accept="image/*" />
             
-            <br/>
-            <div class="d-flex flex-wrap justify-content-center">
-                <div class="large-polaroid">
-                    <img src="@imageSource" alt="Polaroid Image" />
-                    <h1>@_searchTerm</h1>
-                    <h2>@_dateTaken.ToString("MMMM") @_dateTaken.Day, @_dateTaken.Year</h2>
-                    
-                </div>
-            </div>
+                <div class="d-flex flex-wrap justify-content-center">
+                    <div class="large-polaroid">
+                        @if (imageLoaded)
+                        {
+                            <img src="@imageSource" alt="Polaroid Image"/>
+                        }
+                        else
+                        {
+                            <img src="nophoto.png"/>
+                        }
+                        @if (searchTermLoaded)
+                        {
+                            <h1>@_searchTerm</h1>
+                        }
+                        @if (dateLoaded)
+                        {
+                            <h2>@_dateTaken.ToString("MMMM") @_dateTaken.Day, @_dateTaken.Year</h2>
+                        }
 
-            <div class="d-flex justify-content-center">
-                <article class="polaroid-extend-weather">
-                    <table>
-                        <tr>
-                            <th>@((int)_weatherResult.temp)&deg;F</th>
-                            <th>@(_weatherResult.windSpeed)MPH</th>
-                            <th>@((int)_weatherResult.humidity)&deg;</th>
-                        </tr>
-                        <tr>
-                            <td>Temperature</td>
-                            <td>Wind Speed</td>
-                            <td>Humidity</td>
-                        </tr>
-                        <tr>
-                            <td colspan="3">@_weatherResult.desc</td>
-                        </tr>
+                    </div>
+                </div>
+            
+            
+            @if (weatherLoaded)
+            {
+                <div class="d-flex justify-content-center">
+                    <article class="polaroid-extend-weather">
+                        <table>
+                            <tr>
+                                <th>@((int)_weatherResult.temp)&deg;F</th>
+                                <th>@((int)_weatherResult.windSpeed)MPH</th>
+                                <th>@((int)_weatherResult.humidity)&deg;</th>
+                            </tr>
+                            <tr>
+                                <td>Temperature</td>
+                                <td>Wind Speed</td>
+                                <td>Humidity</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3">@_weatherResult.desc</td>
+                            </tr>
                         
-                    </table>
-                </article>
-            </div>
+                        </table>
+                    </article>
+                </div>
+            }
             @* <p>Coordinates: @_coordinateString</p> *@
             @* <p>Address: @_address</p> *@
         </section>
         <section class="col-lg-4 col-sm-12 text-center">
-            <h1 class="section-header-black">
-                The History
-            </h1>
-            <article class="history-card">
-                <p>@_historyOfAddress</p>
-            </article>
-
-            <article class="section-header-white-link">
-                <a href="https://camschmidt.com">
-                    <h1>About</h1>
-                </a>
-            </article>
+            @if (historyLoaded)
+            {
+                <h1 class="section-header-black">
+                    The History
+                </h1>
+                <article class="history-card">
+                    <p>@_historyOfAddress</p>
+                </article>
+            }
+            
+            @if (imageLoaded)
+            {
+                <article class="section-header-white-link">
+                    <a href="https://camschmidt.com">
+                        <h1>About</h1>
+                    </a>
+                </article>
+            }
         </section>
     </div>
 </div>
@@ -108,7 +144,16 @@
     private string _historyOfAddress;
     private string _twitterResultsUrl = "";
     private List<(string title, string link, string snippit, string? thumbnailUrl)>? _webResults = new List<(string, string, string, string?)>();
-    private (double temp, double windSpeed, double humidity, string desc) _weatherResult;
+    private (double temp, double humidity, double windSpeed, string desc) _weatherResult;
+
+    private bool imageLoaded;
+    private bool dateLoaded;
+    private bool coordinatesLoaded;
+    private bool weatherLoaded;
+    private bool twitterLoaded;
+    private bool searchTermLoaded;
+    private bool webResultsLoaded;
+    private bool historyLoaded;
 
     private string _resultMessage = "Waiting for file upload...";
     private const string SuccessMessage = "Image uploaded successfully";
@@ -117,6 +162,14 @@
 
     private async Task FileUploaded(InputFileChangeEventArgs e)
     {
+        imageLoaded = false;
+        dateLoaded = false;
+        coordinatesLoaded = false;
+        weatherLoaded = false;
+        twitterLoaded = false;
+        webResultsLoaded = false;
+        historyLoaded = false;
+        
         // Return if not a heif or jpeg file
         if (e.File.ContentType != "image/heif" && e.File.ContentType != "image/jpeg")
         {
@@ -149,10 +202,12 @@
                 await image.WriteAsync(stream);
                 stream.Position = 0;
             }
-            
-            image.Resize(512, 512);
+
+            image.Resize(1024, 1024);
             imageSource = $"data:image/jpeg;base64,{image.ToBase64()}";
-            
+            imageLoaded = true;
+            StateHasChanged();
+
             // Helper method to extract Exif data
             IExifValue<TValueType>? GetExifData<TValueType>(ExifTag<TValueType> tag) => image.GetExifProfile()?.GetValue(tag);
 
@@ -169,19 +224,21 @@
             if (dateTaken != null && coordinatesExist)
             {
                 _dateTaken = DateTime.ParseExact(dateTaken, "yyyy:MM:dd HH:mm:ss", null);
-                
+                dateLoaded = true;
+
                 _coordinates = (
                     ConvertGpsToDecimal(latDms, latHem),
                     ConvertGpsToDecimal(lngDms, lngHem)
                 );
-                
+                coordinatesLoaded = true;
+
                 await DateAndLocation(_dateTaken, _coordinates.Value);
             }
-            else if(dateTaken == null)
+            else if (dateTaken == null)
             {
                 throw new Exception("No Date Taken Data Found");
             }
-            else if(!coordinatesExist)
+            else if (!coordinatesExist)
             {
                 throw new Exception("No Location Data Found");
             }
@@ -190,19 +247,30 @@
             {
                 var lat = coordinates.Item1;
                 var lng = coordinates.Item2;
-            
+                
                 _twitterResultsUrl = $"https://twitter.com/search?q=+geocode%3A{lat}%2C{lng}%2C2mi+since%3A{dateTaken.Year}-{dateTaken.Month}-{dateTaken.Day - 1}+until%3A{dateTaken.Year}-{dateTaken.Month}-{dateTaken.Day + 1}&src=typed_query";
-            
+                twitterLoaded = true;
+                StateHasChanged();
+                
+                _weatherResult = await weatherService.GetWeatherDateLocation(coordinates, dateTaken);
+                weatherLoaded = true;
+                StateHasChanged();
+                
                 var formatedAddresses = await googleServices.GeocodingApi(coordinates);
                 _address = await openAIService.AddressCorrection(formatedAddresses, image.ToByteArray());
-                _historyOfAddress = await openAIService.HistoryOfAddress(_address);
                 _searchTerm = await openAIService.CreateOptimalSearchTerm(_address);
-            
+                searchTermLoaded = true;
+                StateHasChanged();
+                
                 _webResults = await googleServices.SearchLocationTime(_searchTerm, dateTaken);
-            
-                _weatherResult = await weatherService.GetWeatherDateLocation(coordinates, dateTaken);
+                webResultsLoaded = true;
+                StateHasChanged();
+                
+                _historyOfAddress = await openAIService.HistoryOfAddress(_address);
+                historyLoaded = true;
+                StateHasChanged();
             }
-            
+
             // async Task LocationOnly((double, double) coordinates)
             // {
             //     var lat = coordinates.Item1;

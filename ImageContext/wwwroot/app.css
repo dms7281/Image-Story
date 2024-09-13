@@ -97,6 +97,7 @@ h1 {
   object-fit: cover; /* Crop image to fit within the square */
   border: 5px solid white; /* White border to mimic Polaroid photo */
   border-bottom: none; /* Remove bottom border to leave space for caption */
+  filter: blur(1px) saturate(150%);
 }
 
 .mini-polaroid-link article {
@@ -119,6 +120,7 @@ h1 {
   min-width: 425px;
   min-height: 525px;
   padding: 10px;
+  margin-top: 10px;
 }
 .large-polaroid h1 {
   margin: 0;
@@ -134,6 +136,8 @@ h1 {
   margin: 0;
   padding-top: 10px;
   padding-bottom: 10px;
+  border-radius: 20px 20px 20px 20px;
+  border: 6px solid #000000;
 }
 
 .section-header-black {
@@ -149,6 +153,7 @@ h1 {
 .section-header-white-link a h1 {
   background-color: white;
   padding: 10px;
+  border-radius: 20px 20px 20px 20px;
 }
 
 .polaroid-extend, .polaroid-extend-back, .polaroid-extend-weather {
@@ -190,6 +195,9 @@ h1 {
   justify-content: center;
   gap: 10px; /* Moved from the second div */
   background-color: #5d5d5d;
+  margin-top: 10px;
+  border-radius: 20px 20px 20px 20px;
+  border: 6px solid #000000;
 }
 
 .history-card {
@@ -199,7 +207,7 @@ h1 {
   color: black;
   background-color: white;
   margin: 0;
-  padding: 15px;
+  padding: 0;
   font-size: clamp(1.25rem, 1.5vw, 1.5rem);
 }
 
