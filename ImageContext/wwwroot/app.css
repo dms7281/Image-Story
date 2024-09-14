@@ -82,6 +82,15 @@ h1 {
   text-decoration: none;
 }
 
+.floating-alert {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  width: 300px;
+}
+
 .polaroid-card, .large-polaroid, .mini-polaroid-link article {
   background-color: white;
   padding: 10px;

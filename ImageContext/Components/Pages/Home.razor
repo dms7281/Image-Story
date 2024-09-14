@@ -11,6 +11,7 @@
 
 @rendermode InteractiveServer
 
+@inject IJSRuntime JS
 @inject GoogleServices googleServices;
 @inject OpenAIService openAIService;
 @inject WeatherService weatherService;
@@ -27,7 +28,7 @@
                 <div class="scrollable-card d-flex flex-wrap justify-content-center">
                     @foreach (var webResult in _webResults)
                     {
-                        <a href="@webResult.title" class="mini-polaroid-link">
+                        <a href="@webResult.link" class="mini-polaroid-link">
                             <article>
                                 @if (webResult.thumbnailUrl != null)
                                 {
@@ -54,32 +55,46 @@
             }
         </section>
         <section class="col-lg-4 col-sm-12 text-center">
-            <p role="status">Message: @_resultMessage</p>
-            <InputFile OnChange="FileUploaded" accept="image/*" />
-            
-                <div class="d-flex flex-wrap justify-content-center">
-                    <div class="large-polaroid">
-                        @if (imageLoaded)
-                        {
-                            <img src="@imageSource" alt="Polaroid Image"/>
-                        }
-                        else
-                        {
-                            <img src="nophoto.png"/>
-                        }
-                        @if (searchTermLoaded)
-                        {
-                            <h1>@_searchTerm</h1>
-                        }
-                        @if (dateLoaded)
-                        {
-                            <h2>@_dateTaken.ToString("MMMM") @_dateTaken.Day, @_dateTaken.Year</h2>
-                        }
-
-                    </div>
+            @if (!string.IsNullOrEmpty(_resultMessage))
+            {
+                <div class="alert alert-success alert-dismissible fade show floating-alert" role="alert" id="alertMessage">
+                    <strong>@_resultMessage</strong>
+                    <button type="button" class="btn-close" @onclick="DismissAlert" aria-label="Close"></button>
                 </div>
-            
-            
+            }
+            @if (!string.IsNullOrEmpty(_exceptionMessage))
+            {
+                <div class="alert alert-danger alert-dismissible fade show floating-alert" role="alert" id="alertMessage">
+                    <strong>@_exceptionMessage</strong>
+                    <button type="button" class="btn-close" @onclick="DismissAlert" aria-label="Close"></button>
+                </div>
+            }
+
+            <InputFile OnChange="FileUploaded" accept="image/*"/>
+
+            <div class="d-flex flex-wrap justify-content-center">
+                <div class="large-polaroid">
+                    @if (imageLoaded)
+                    {
+                        <img src="@imageSource" alt="Polaroid Image"/>
+                    }
+                    else
+                    {
+                        <img src="nophoto.png"/>
+                    }
+                    @if (searchTermLoaded)
+                    {
+                        <h1>@_searchTerm</h1>
+                    }
+                    @if (dateLoaded)
+                    {
+                        <h2>@_dateTaken.ToString("MMMM") @_dateTaken.Day, @_dateTaken.Year</h2>
+                    }
+
+                </div>
+            </div>
+
+
             @if (weatherLoaded)
             {
                 <div class="d-flex justify-content-center">
@@ -98,7 +113,7 @@
                             <tr>
                                 <td colspan="3">@_weatherResult.desc</td>
                             </tr>
-                        
+
                         </table>
                     </article>
                 </div>
@@ -130,6 +145,9 @@
 </div>
 
 @code {
+    
+    private string _resultMessage;
+    private string _exceptionMessage;
 
     private DateTime lastSubmissionTime = DateTime.MinValue;
     
@@ -155,11 +173,6 @@
     private bool webResultsLoaded;
     private bool historyLoaded;
 
-    private string _resultMessage = "Waiting for file upload...";
-    private const string SuccessMessage = "Image uploaded successfully";
-    private const string InvalidFileMessage = "Error: Invalid file type";
-    private const string NullMetadataMessage = "Error: Metadata not available";
-
     private async Task FileUploaded(InputFileChangeEventArgs e)
     {
         imageLoaded = false;
@@ -167,18 +180,18 @@
         coordinatesLoaded = false;
         weatherLoaded = false;
         twitterLoaded = false;
+        searchTermLoaded = false;
         webResultsLoaded = false;
         historyLoaded = false;
-        
-        // Return if not a heif or jpeg file
-        if (e.File.ContentType != "image/heif" && e.File.ContentType != "image/jpeg")
-        {
-            _resultMessage = InvalidFileMessage;
-            return;
-        }
 
         try
         {
+            // Throw error if not a heif or jpeg file
+            if (e.File.ContentType != "image/heif" && e.File.ContentType != "image/jpeg")
+            {
+                throw new Exception("Image uploaded successfully");
+            }
+            
             if (DateTime.Now < lastSubmissionTime.AddSeconds(45))
             {
                 throw new Exception("Please wait before submitting another photo.");
@@ -233,14 +246,12 @@
                 coordinatesLoaded = true;
 
                 await DateAndLocation(_dateTaken, _coordinates.Value);
+
+                _resultMessage = "Image Uploaded Successfully";
             }
-            else if (dateTaken == null)
+            else
             {
-                throw new Exception("No Date Taken Data Found");
-            }
-            else if (!coordinatesExist)
-            {
-                throw new Exception("No Location Data Found");
+                throw new Exception("Error: Metadata not available");
             }
 
             async Task DateAndLocation(DateTime dateTaken, (double, double) coordinates)
@@ -299,11 +310,11 @@
         }
         catch (ExifLibException ex)
         {
-            _resultMessage = $"Error: {ex.Message}";
+            _exceptionMessage = $"Error: {ex.Message}";
         }
         catch (Exception ex)
         {
-            _resultMessage = $"Error: {ex.Message}";
+            _exceptionMessage = $"Error: {ex.Message}";
         }
     }
     
@@ -317,5 +328,11 @@
         if (hemisphere == "S" || hemisphere == "W") decimalCoordinate = -1 * decimalCoordinate;
             
         return decimalCoordinate;
+    }
+    
+    private async Task DismissAlert()
+    {
+        await JS.InvokeVoidAsync("dismissAlert", "#alertMessage");
+        _exceptionMessage = null; // Clear message after dismissal
     }
 }
