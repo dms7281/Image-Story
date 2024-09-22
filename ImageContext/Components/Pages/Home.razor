@@ -17,6 +17,26 @@
 @inject WeatherService weatherService;
 
 <PageTitle>Home</PageTitle>
+@if (_isInitialized)
+{
+    if (IsOverlayVisible)
+    {
+        <div class="privacy-policy-overlay">
+            <div>
+                <h1>Privacy Policy</h1>
+                <p>
+                    Uploaded images are not permanently stored by this application.
+                    Image metadata may be accessed and used as input for external APIs to enhance or retrieve relevant information.
+                    No personal data or images are retained after processing.
+                </p>
+                <button @onclick="CloseOverlay">I Understand</button>
+            </div>
+        </div>
+    }
+}
+
+
+
 <div class="container-fluid">
     <div class="row">
         <section class="col-lg-4 col-sm-12 text-center">
@@ -145,7 +165,8 @@
 </div>
 
 @code {
-    
+    private bool IsOverlayVisible = true;
+    private bool _isInitialized = false;
     private string _resultMessage;
     private string _exceptionMessage;
 
@@ -189,7 +210,7 @@
             // Throw error if not a heif or jpeg file
             if (e.File.ContentType != "image/heif" && e.File.ContentType != "image/jpeg")
             {
-                throw new Exception("Image uploaded successfully");
+                throw new Exception("Unsupported File Format");
             }
             
             if (DateTime.Now < lastSubmissionTime.AddSeconds(45))
@@ -334,5 +355,32 @@
     {
         await JS.InvokeVoidAsync("dismissAlert", "#alertMessage");
         _exceptionMessage = null; // Clear message after dismissal
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Initially hide the overlay
+            IsOverlayVisible = false;
+
+            // Check if the overlay visibility is stored in sessionStorage
+            var storedValue = await JS.InvokeAsync<string>("overlayStorage.getItem", "overlayClosed");
+            if (storedValue != "true")
+            {
+                IsOverlayVisible = true; // Show overlay only if not closed
+            }
+
+            _isInitialized = true; // Mark that initialization is done
+            StateHasChanged(); // Trigger a re-render with the updated visibility state
+        }
+    }
+
+    private async Task CloseOverlay()
+    {
+        IsOverlayVisible = false;
+
+        // Store in sessionStorage that the overlay has been closed
+        await JS.InvokeVoidAsync("overlayStorage.setItem", "overlayClosed", "true");
     }
 }
