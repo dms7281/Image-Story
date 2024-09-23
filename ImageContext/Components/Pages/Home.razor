@@ -8,6 +8,7 @@
 @using Google.Apis.CustomSearchAPI.v1
 @using Google.Apis.Services
 @using OpenAI_API
+@using RestSharp
 
 @rendermode InteractiveServer
 
@@ -34,8 +35,6 @@
         </div>
     }
 }
-
-
 
 <div class="container-fluid">
     <div class="row">
@@ -272,7 +271,7 @@
             }
             else
             {
-                throw new Exception("Error: Metadata not available");
+                throw new Exception("Metadata not available");
             }
 
             async Task DateAndLocation(DateTime dateTaken, (double, double) coordinates)

@@ -25,6 +25,9 @@
       <None Update="Components\Pages\Home.razor.css">
         <DependentUpon>Home.razor</DependentUpon>
       </None>
+      <None Update="Components\Layout\NavMenu.razor.css">
+        <DependentUpon>NavMenu.razor</DependentUpon>
+      </None>
     </ItemGroup>
 
 </Project>
