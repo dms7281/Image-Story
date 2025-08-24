@@ -7,7 +7,7 @@
 @using Google.Apis.CustomSearchAPI;
 @using Google.Apis.CustomSearchAPI.v1
 @using Google.Apis.Services
-@using OpenAI_API
+@using OpenAI
 @using RestSharp
 
 @rendermode InteractiveServer
@@ -89,7 +89,7 @@
                 </div>
             }
 
-            <InputFile OnChange="FileUploaded" accept="image/*"/>
+            <InputFile OnChange="FileUploaded" accept="image/*, .heif, .HEIF"/>
 
             <div class="d-flex flex-wrap justify-content-center">
                 <div class="large-polaroid">
@@ -207,7 +207,9 @@
         try
         {
             // Throw error if not a heif or jpeg file
-            if (e.File.ContentType != "image/heif" && e.File.ContentType != "image/jpeg")
+
+            string fileExtension = e.File.Name.Split(".").Last ().ToLower ();
+            if (fileExtension != "heif" && fileExtension != "jpeg" && fileExtension != "jpg")
             {
                 throw new Exception("Unsupported File Format");
             }
@@ -227,7 +229,7 @@
             Console.WriteLine("Read file into memory stream");
 
             var image = new MagickImage(stream);
-            if (e.File.ContentType == "image/heif")
+            if (fileExtension == "heif")
             {
                 // Convert image to Jpg, flush stream, rewrite image to stream
                 image.Format = MagickFormat.Jpg;
